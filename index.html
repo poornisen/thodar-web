@@ -133,7 +133,8 @@
     <script>
         let selectedNodeId = null;
 
-        let familyData = [
+        // Default seed data used on the first run
+        const defaultSeedData = [
             // Generation 1: Grandparents
             { id: 1, pids: [2], name: "N. Devendran", gender: "male" },
             { id: 2, pids: [1], name: "D. Leelavathy", gender: "female" },
@@ -153,6 +154,42 @@
             { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female" }
         ];
 
+        // Storage Adapter: Uses Android internal storage when inside app, or browser localStorage when on Safari/Chrome
+        function loadInitialData() {
+            try {
+                if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
+                    const androidData = window.AndroidBridge.loadFamilyData();
+                    if (androidData && androidData.trim().length > 0) {
+                        return JSON.parse(androidData);
+                    }
+                } else {
+                    const localData = localStorage.getItem("thodar_family_data");
+                    if (localData) {
+                        return JSON.parse(localData);
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading persisted data:", e);
+            }
+            return defaultSeedData;
+        }
+
+        function persistCurrentData() {
+            try {
+                const currentNodes = family.nodes;
+                const jsonStr = JSON.stringify(currentNodes);
+                if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                    window.AndroidBridge.saveFamilyData(jsonStr);
+                } else {
+                    localStorage.setItem("thodar_family_data", jsonStr);
+                }
+            } catch (e) {
+                console.error("Error saving persisted data:", e);
+            }
+        }
+
+        let familyData = loadInitialData();
+
         const family = new FamilyTree(document.getElementById("tree"), {
             template: "john",
             mode: "dark",
@@ -171,6 +208,15 @@
                 field_0: "name"
             },
             nodes: familyData
+        });
+
+        // Auto-save listeners when nodes are updated or removed via the built-in UI
+        family.onUpdateNode(function(args) {
+            setTimeout(persistCurrentData, 100);
+        });
+
+        family.onRemoveNode(function(args) {
+            setTimeout(persistCurrentData, 100);
         });
 
         function openAddRelativeModal(nodeId) {
@@ -196,7 +242,7 @@
             const relType = document.getElementById('relType').value;
             const gender = document.getElementById('personGender').value;
             const targetPerson = family.get(selectedNodeId);
-            const newId = Date.now(); // Generates a guaranteed unique ID
+            const newId = Date.now();
 
             if (relType === "child") {
                 let fatherId = null;
@@ -216,9 +262,7 @@
                 family.addNode(newChild);
 
             } else if (relType === "spouse") {
-                // Partner link must be bidirectional
                 const newSpouse = { id: newId, pids: [targetPerson.id], name: name, gender: gender };
-                
                 let currentPids = targetPerson.pids ? [...targetPerson.pids] : [];
                 currentPids.push(newId);
                 targetPerson.pids = currentPids;
@@ -261,6 +305,7 @@
 
             family.draw();
             closeModal();
+            persistCurrentData();
         }
     </script>
 </body>
