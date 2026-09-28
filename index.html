@@ -20,6 +20,31 @@
             height: 100%;
         }
 
+        /* Status Toast */
+        #toast {
+            visibility: hidden;
+            min-width: 160px;
+            background-color: rgba(30, 144, 255, 0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 20px;
+            padding: 10px 16px;
+            position: fixed;
+            z-index: 10000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
         /* Modal Dialog Styling */
         .modal-overlay {
             display: none;
@@ -98,6 +123,7 @@
 <body>
 
     <div id="tree"></div>
+    <div id="toast">Saved</div>
 
     <!-- Add Relative Modal -->
     <div id="addModal" class="modal-overlay">
@@ -133,7 +159,6 @@
     <script>
         let selectedNodeId = null;
 
-        // Default seed data used on the first run
         const defaultSeedData = [
             // Generation 1: Grandparents
             { id: 1, pids: [2], name: "N. Devendran", gender: "male" },
@@ -154,7 +179,14 @@
             { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female" }
         ];
 
-        // Storage Adapter: Uses Android internal storage when inside app, or browser localStorage when on Safari/Chrome
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = ""; }, 2000);
+        }
+
+        // Clean loader: checks Android storage first, then browser localStorage, then defaultSeed
         function loadInitialData() {
             try {
                 if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
@@ -162,29 +194,57 @@
                     if (androidData && androidData.trim().length > 0) {
                         return JSON.parse(androidData);
                     }
-                } else {
-                    const localData = localStorage.getItem("thodar_family_data");
-                    if (localData) {
-                        return JSON.parse(localData);
-                    }
                 }
-            } catch (e) {
-                console.error("Error loading persisted data:", e);
+                const webData = localStorage.getItem("thodar_family_data");
+                if (webData && webData.trim().length > 0) {
+                    return JSON.parse(webData);
+                }
+            } catch (err) {
+                console.error("Failed to load stored data:", err);
             }
             return defaultSeedData;
         }
 
+        // Clean exporter: extracts pure data fields only, avoiding circular references
+        function exportCleanData() {
+            const cleanList = [];
+            // Balkan stores node data accessible via family.get(id) or iterating internal nodes
+            for (let id in family.nodes) {
+                const n = family.get(id);
+                if (n) {
+                    const nodeObj = {
+                        id: n.id,
+                        name: n.name || "",
+                        gender: n.gender || "male"
+                    };
+                    if (n.fid !== undefined && n.fid !== null) nodeObj.fid = n.fid;
+                    if (n.mid !== undefined && n.mid !== null) nodeObj.mid = n.mid;
+                    if (n.pids && Array.isArray(n.pids) && n.pids.length > 0) {
+                        nodeObj.pids = [...n.pids];
+                    }
+                    cleanList.push(nodeObj);
+                }
+            }
+            return cleanList;
+        }
+
         function persistCurrentData() {
             try {
-                const currentNodes = family.nodes;
-                const jsonStr = JSON.stringify(currentNodes);
+                const cleanData = exportCleanData();
+                const jsonStr = JSON.stringify(cleanData);
+
+                // Save to browser localStorage (for Safari / Chrome / GitHub Pages)
+                localStorage.setItem("thodar_family_data", jsonStr);
+
+                // Save to Android Internal File (if running inside Android App)
                 if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                     window.AndroidBridge.saveFamilyData(jsonStr);
                 } else {
-                    localStorage.setItem("thodar_family_data", jsonStr);
+                    showToast("Saved to browser");
                 }
-            } catch (e) {
-                console.error("Error saving persisted data:", e);
+            } catch (err) {
+                console.error("Save error:", err);
+                alert("Error saving: " + err.message);
             }
         }
 
@@ -210,13 +270,13 @@
             nodes: familyData
         });
 
-        // Auto-save listeners when nodes are updated or removed via the built-in UI
+        // Listen for Balkan's built-in edit / remove events
         family.onUpdateNode(function(args) {
-            setTimeout(persistCurrentData, 100);
+            setTimeout(persistCurrentData, 150);
         });
 
         family.onRemoveNode(function(args) {
-            setTimeout(persistCurrentData, 100);
+            setTimeout(persistCurrentData, 150);
         });
 
         function openAddRelativeModal(nodeId) {
@@ -305,7 +365,7 @@
 
             family.draw();
             closeModal();
-            persistCurrentData();
+            setTimeout(persistCurrentData, 150);
         }
     </script>
 </body>
