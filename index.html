@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thodar Family Tree</title>
+    <script src="https://balkan.app/js/FamilyTree.js"></script>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a1a24;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #tree {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Modal Dialog Styling */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        .modal-box {
+            background: #252533;
+            border: 1px solid #3b3b4f;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 360px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+        }
+        .modal-box h3 {
+            margin-top: 0;
+            margin-bottom: 14px;
+            font-size: 18px;
+            color: #4da3ff;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #a0a0b8;
+            margin-bottom: 6px;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #191924;
+            border: 1px solid #3d3d52;
+            color: #ffffff;
+            font-size: 15px;
+            outline: none;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-cancel {
+            background: #3b3b4f;
+            color: #d1d1e0;
+        }
+        .btn-save {
+            background: #007bff;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="tree"></div>
+
+    <!-- Add Relative Modal -->
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">Add Relative</h3>
+            <div class="form-group">
+                <label>Relationship</label>
+                <select id="relType">
+                    <option value="child">Child (Son / Daughter)</option>
+                    <option value="spouse">Spouse / Partner</option>
+                    <option value="father">Father</option>
+                    <option value="mother">Mother</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="personName" placeholder="Enter full name" />
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select id="personGender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-save" onclick="saveRelative()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedNodeId = null;
+
+        let familyData = [
+            // Generation 1: Grandparents
+            { id: 1, pids: [2], name: "N. Devendran", gender: "male" },
+            { id: 2, pids: [1], name: "D. Leelavathy", gender: "female" },
+
+            // Generation 2: Children & In-Laws
+            { id: 3, fid: 1, mid: 2, pids: [4], name: "D. Manivannan", gender: "male" },
+            { id: 4, pids: [3], name: "K.V. Lakshmi", gender: "female" },
+            { id: 5, fid: 1, mid: 2, pids: [7], name: "D. Sumathy", gender: "female" },
+            { id: 7, pids: [5], name: "S. Sundaresan", gender: "male" },
+            { id: 8, fid: 1, mid: 2, pids: [9], name: "D. Vijayarani", gender: "female" },
+            { id: 9, pids: [8], name: "G.V. Ramesh", gender: "male" },
+            { id: 10, fid: 1, mid: 2, pids: [11], name: "D. Senthil Kumar", gender: "male" },
+            { id: 11, pids: [10], name: "S. Poornima", gender: "female" },
+
+            // Generation 3: Grandchildren
+            { id: 6, fid: 3, mid: 4, name: "P.M. Karthik Jogaian", gender: "male" },
+            { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female" }
+        ];
+
+        const family = new FamilyTree(document.getElementById("tree"), {
+            template: "john",
+            mode: "dark",
+            mouseScrool: FamilyTree.action.zoom,
+            nodeMenu: {
+                addRel: {
+                    text: "Add Relative",
+                    onClick: function(nodeId) {
+                        openAddRelativeModal(nodeId);
+                    }
+                },
+                edit: { text: "Edit Details" },
+                remove: { text: "Remove Person" }
+            },
+            nodeBinding: {
+                field_0: "name"
+            },
+            nodes: familyData
+        });
+
+        function openAddRelativeModal(nodeId) {
+            selectedNodeId = nodeId;
+            const person = family.get(nodeId);
+            document.getElementById('modalTitle').innerText = "Add Relative to " + (person ? person.name : "");
+            document.getElementById('personName').value = "";
+            document.getElementById('addModal').style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById('addModal').style.display = "none";
+            selectedNodeId = null;
+        }
+
+        function saveRelative() {
+            const name = document.getElementById('personName').value.trim();
+            if (!name) {
+                alert("Please enter a name.");
+                return;
+            }
+
+            const relType = document.getElementById('relType').value;
+            const gender = document.getElementById('personGender').value;
+            const targetPerson = family.get(selectedNodeId);
+            const newId = Date.now(); // Generates a guaranteed unique ID
+
+            if (relType === "child") {
+                let fatherId = null;
+                let motherId = null;
+
+                if (targetPerson.gender === "male") {
+                    fatherId = targetPerson.id;
+                    motherId = (targetPerson.pids && targetPerson.pids.length > 0) ? targetPerson.pids[0] : null;
+                } else {
+                    motherId = targetPerson.id;
+                    fatherId = (targetPerson.pids && targetPerson.pids.length > 0) ? targetPerson.pids[0] : null;
+                }
+
+                const newChild = { id: newId, name: name, gender: gender };
+                if (fatherId) newChild.fid = fatherId;
+                if (motherId) newChild.mid = motherId;
+                family.addNode(newChild);
+
+            } else if (relType === "spouse") {
+                // Partner link must be bidirectional
+                const newSpouse = { id: newId, pids: [targetPerson.id], name: name, gender: gender };
+                
+                let currentPids = targetPerson.pids ? [...targetPerson.pids] : [];
+                currentPids.push(newId);
+                targetPerson.pids = currentPids;
+
+                family.addNode(newSpouse);
+                family.updateNode(targetPerson);
+
+            } else if (relType === "father") {
+                const newFather = { id: newId, name: name, gender: "male" };
+                if (targetPerson.mid) {
+                    newFather.pids = [targetPerson.mid];
+                    const mother = family.get(targetPerson.mid);
+                    if (mother) {
+                        let mPids = mother.pids ? [...mother.pids] : [];
+                        mPids.push(newId);
+                        mother.pids = mPids;
+                        family.updateNode(mother);
+                    }
+                }
+                targetPerson.fid = newId;
+                family.addNode(newFather);
+                family.updateNode(targetPerson);
+
+            } else if (relType === "mother") {
+                const newMother = { id: newId, name: name, gender: "female" };
+                if (targetPerson.fid) {
+                    newMother.pids = [targetPerson.fid];
+                    const father = family.get(targetPerson.fid);
+                    if (father) {
+                        let fPids = father.pids ? [...father.pids] : [];
+                        fPids.push(newId);
+                        father.pids = fPids;
+                        family.updateNode(father);
+                    }
+                }
+                targetPerson.mid = newId;
+                family.addNode(newMother);
+                family.updateNode(targetPerson);
+            }
+
+            family.draw();
+            closeModal();
+        }
+    </script>
+</body>
+</html>
