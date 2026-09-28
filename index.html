@@ -23,12 +23,12 @@
         /* Status Toast */
         #toast {
             visibility: hidden;
-            min-width: 160px;
-            background-color: rgba(30, 144, 255, 0.9);
+            min-width: 180px;
+            background-color: #007bff;
             color: #fff;
             text-align: center;
             border-radius: 20px;
-            padding: 10px 16px;
+            padding: 10px 18px;
             position: fixed;
             z-index: 10000;
             left: 50%;
@@ -36,7 +36,7 @@
             transform: translateX(-50%);
             font-size: 14px;
             font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
             opacity: 0;
             transition: opacity 0.3s, visibility 0.3s;
         }
@@ -183,73 +183,56 @@
             const toast = document.getElementById("toast");
             toast.innerText = msg;
             toast.className = "show";
-            setTimeout(() => { toast.className = ""; }, 2000);
+            setTimeout(() => { toast.className = ""; }, 2200);
         }
 
-        // Clean loader: checks Android storage first, then browser localStorage, then defaultSeed
-        function loadInitialData() {
+        // Single source of truth: our clean data array
+        let familyData = [];
+
+        function loadSavedData() {
             try {
+                // 1. Try Android Native Bridge
                 if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
                     const androidData = window.AndroidBridge.loadFamilyData();
-                    if (androidData && androidData.trim().length > 0) {
+                    if (androidData && androidData.trim().length > 5) {
                         return JSON.parse(androidData);
                     }
                 }
+                // 2. Try Web / Safari localStorage
                 const webData = localStorage.getItem("thodar_family_data");
-                if (webData && webData.trim().length > 0) {
+                if (webData && webData.trim().length > 5) {
                     return JSON.parse(webData);
                 }
             } catch (err) {
-                console.error("Failed to load stored data:", err);
+                console.error("Error loading data:", err);
             }
-            return defaultSeedData;
+            // 3. Fallback to default seed data
+            return JSON.parse(JSON.stringify(defaultSeedData));
         }
 
-        // Clean exporter: extracts pure data fields only, avoiding circular references
-        function exportCleanData() {
-            const cleanList = [];
-            // Balkan stores node data accessible via family.get(id) or iterating internal nodes
-            for (let id in family.nodes) {
-                const n = family.get(id);
-                if (n) {
-                    const nodeObj = {
-                        id: n.id,
-                        name: n.name || "",
-                        gender: n.gender || "male"
-                    };
-                    if (n.fid !== undefined && n.fid !== null) nodeObj.fid = n.fid;
-                    if (n.mid !== undefined && n.mid !== null) nodeObj.mid = n.mid;
-                    if (n.pids && Array.isArray(n.pids) && n.pids.length > 0) {
-                        nodeObj.pids = [...n.pids];
-                    }
-                    cleanList.push(nodeObj);
-                }
-            }
-            return cleanList;
-        }
-
-        function persistCurrentData() {
+        function saveToStorage() {
             try {
-                const cleanData = exportCleanData();
-                const jsonStr = JSON.stringify(cleanData);
+                const jsonStr = JSON.stringify(familyData);
 
-                // Save to browser localStorage (for Safari / Chrome / GitHub Pages)
+                // Save to web localStorage
                 localStorage.setItem("thodar_family_data", jsonStr);
 
-                // Save to Android Internal File (if running inside Android App)
+                // Save to Android Internal File
                 if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                     window.AndroidBridge.saveFamilyData(jsonStr);
-                } else {
-                    showToast("Saved to browser");
                 }
+
+                showToast("Saved Successfully");
             } catch (err) {
                 console.error("Save error:", err);
-                alert("Error saving: " + err.message);
+                alert("Failed to save: " + err.message);
             }
         }
 
-        let familyData = loadInitialData();
+        // Initialize data array
+        familyData = loadSavedData();
 
+        // Initialize FamilyTree engine
         const family = new FamilyTree(document.getElementById("tree"), {
             template: "john",
             mode: "dark",
@@ -270,18 +253,37 @@
             nodes: familyData
         });
 
-        // Listen for Balkan's built-in edit / remove events
+        // Sync changes made directly in Balkan's Edit drawer
         family.onUpdateNode(function(args) {
-            setTimeout(persistCurrentData, 150);
+            const updated = args.addNodesData ? args.addNodesData[0] : null;
+            if (updated && updated.id) {
+                const idx = familyData.findIndex(item => item.id == updated.id);
+                if (idx !== -1) {
+                    if (updated.name) familyData[idx].name = updated.name;
+                    if (updated.gender) familyData[idx].gender = updated.gender;
+                    saveToStorage();
+                }
+            }
         });
 
+        // Sync changes when someone removes a person
         family.onRemoveNode(function(args) {
-            setTimeout(persistCurrentData, 150);
+            const removeId = args.id;
+            familyData = familyData.filter(item => item.id != removeId);
+            // Also clean up any pids pointing to the removed node
+            familyData.forEach(item => {
+                if (item.pids && Array.isArray(item.pids)) {
+                    item.pids = item.pids.filter(p => p != removeId);
+                }
+                if (item.fid == removeId) delete item.fid;
+                if (item.mid == removeId) delete item.mid;
+            });
+            saveToStorage();
         });
 
         function openAddRelativeModal(nodeId) {
             selectedNodeId = nodeId;
-            const person = family.get(nodeId);
+            const person = familyData.find(m => m.id == nodeId);
             document.getElementById('modalTitle').innerText = "Add Relative to " + (person ? person.name : "");
             document.getElementById('personName').value = "";
             document.getElementById('addModal').style.display = "flex";
@@ -301,71 +303,75 @@
 
             const relType = document.getElementById('relType').value;
             const gender = document.getElementById('personGender').value;
-            const targetPerson = family.get(selectedNodeId);
+            const target = familyData.find(m => m.id == selectedNodeId);
+
+            if (!target) {
+                alert("Could not locate selected person.");
+                return;
+            }
+
             const newId = Date.now();
 
             if (relType === "child") {
                 let fatherId = null;
                 let motherId = null;
 
-                if (targetPerson.gender === "male") {
-                    fatherId = targetPerson.id;
-                    motherId = (targetPerson.pids && targetPerson.pids.length > 0) ? targetPerson.pids[0] : null;
+                if (target.gender === "male") {
+                    fatherId = target.id;
+                    motherId = (target.pids && target.pids.length > 0) ? target.pids[0] : null;
                 } else {
-                    motherId = targetPerson.id;
-                    fatherId = (targetPerson.pids && targetPerson.pids.length > 0) ? targetPerson.pids[0] : null;
+                    motherId = target.id;
+                    fatherId = (target.pids && target.pids.length > 0) ? target.pids[0] : null;
                 }
 
                 const newChild = { id: newId, name: name, gender: gender };
                 if (fatherId) newChild.fid = fatherId;
                 if (motherId) newChild.mid = motherId;
-                family.addNode(newChild);
+
+                familyData.push(newChild);
 
             } else if (relType === "spouse") {
-                const newSpouse = { id: newId, pids: [targetPerson.id], name: name, gender: gender };
-                let currentPids = targetPerson.pids ? [...targetPerson.pids] : [];
-                currentPids.push(newId);
-                targetPerson.pids = currentPids;
+                const newSpouse = { id: newId, pids: [target.id], name: name, gender: gender };
+                
+                if (!target.pids) target.pids = [];
+                if (!target.pids.includes(newId)) target.pids.push(newId);
 
-                family.addNode(newSpouse);
-                family.updateNode(targetPerson);
+                familyData.push(newSpouse);
 
             } else if (relType === "father") {
                 const newFather = { id: newId, name: name, gender: "male" };
-                if (targetPerson.mid) {
-                    newFather.pids = [targetPerson.mid];
-                    const mother = family.get(targetPerson.mid);
+                if (target.mid) {
+                    newFather.pids = [target.mid];
+                    const mother = familyData.find(m => m.id == target.mid);
                     if (mother) {
-                        let mPids = mother.pids ? [...mother.pids] : [];
-                        mPids.push(newId);
-                        mother.pids = mPids;
-                        family.updateNode(mother);
+                        if (!mother.pids) mother.pids = [];
+                        if (!mother.pids.includes(newId)) mother.pids.push(newId);
                     }
                 }
-                targetPerson.fid = newId;
-                family.addNode(newFather);
-                family.updateNode(targetPerson);
+                target.fid = newId;
+                familyData.push(newFather);
 
             } else if (relType === "mother") {
                 const newMother = { id: newId, name: name, gender: "female" };
-                if (targetPerson.fid) {
-                    newMother.pids = [targetPerson.fid];
-                    const father = family.get(targetPerson.fid);
+                if (target.fid) {
+                    newMother.pids = [target.fid];
+                    const father = familyData.find(m => m.id == target.fid);
                     if (father) {
-                        let fPids = father.pids ? [...father.pids] : [];
-                        fPids.push(newId);
-                        father.pids = fPids;
-                        family.updateNode(father);
+                        if (!father.pids) father.pids = [];
+                        if (!father.pids.includes(newId)) father.pids.push(newId);
                     }
                 }
-                targetPerson.mid = newId;
-                family.addNode(newMother);
-                family.updateNode(targetPerson);
+                target.mid = newId;
+                familyData.push(newMother);
             }
 
-            family.draw();
             closeModal();
-            setTimeout(persistCurrentData, 150);
+
+            // Reload the tree with our updated array
+            family.load(familyData);
+
+            // Persist immediately
+            saveToStorage();
         }
     </script>
 </body>
