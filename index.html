@@ -34,6 +34,16 @@
             height: 100%;
         }
 
+        /* Deceased Visual Treatment (Grayscale portrait + respectful muted border) */
+        .deceased image, .deceased img {
+            filter: grayscale(100%) contrast(105%) !important;
+            opacity: 0.88;
+        }
+        .deceased rect {
+            stroke: #59596e !important;
+            stroke-dasharray: 4, 2;
+        }
+
         /* Stealth Top Bar */
         #topBar {
             position: fixed;
@@ -349,8 +359,21 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Living Status</label>
+                    <select id="personDeceased" onchange="toggleDeceasedFields('add', this.value === 'true')">
+                        <option value="false">Living</option>
+                        <option value="true">Deceased</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label>Birth Year</label>
-                    <input type="text" id="personBirth" placeholder="e.g. 1980" />
+                    <input type="text" id="personBirth" placeholder="e.g. 1938" />
+                </div>
+                <div class="form-group" id="addPassingYearGroup" style="display: none;">
+                    <label>Passing Year</label>
+                    <input type="text" id="personDeath" placeholder="e.g. 2012" />
                 </div>
             </div>
             <div class="form-group">
@@ -397,8 +420,21 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Living Status</label>
+                    <select id="editPersonDeceased" onchange="toggleDeceasedFields('edit', this.value === 'true')">
+                        <option value="false">Living</option>
+                        <option value="true">Deceased</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label>Birth Year</label>
-                    <input type="text" id="editPersonBirth" placeholder="e.g. 1975" />
+                    <input type="text" id="editPersonBirth" placeholder="e.g. 1938" />
+                </div>
+                <div class="form-group" id="editPassingYearGroup" style="display: none;">
+                    <label>Passing Year</label>
+                    <input type="text" id="editPersonDeath" placeholder="e.g. 2012" />
                 </div>
             </div>
             <div class="form-group">
@@ -452,19 +488,20 @@
         let isAdmin = false;
         let selectedNodeId = null;
 
+        // Default seed data with tags & deceased fields
         const defaultSeedData = [
-            { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", place: "Salem", notes: "*" },
-            { id: 2, pids: [1], name: "D. Leelavathy", gender: "female", birthYear: "1945", place: "Salem" },
-            { id: 3, fid: 1, mid: 2, pids: [4], name: "D. Manivannan", gender: "male", birthYear: "1966", place: "Salem" },
-            { id: 4, pids: [3], name: "K.V. Lakshmi", gender: "female", birthYear: "1972", place: "Erode" },
-            { id: 5, fid: 1, mid: 2, pids: [7], name: "D. Sumathy", gender: "female", birthYear: "1969", place: "Salem" },
-            { id: 7, pids: [5], name: "S. Sundaresan", gender: "male", birthYear: "1964", place: "Coimbatore" },
-            { id: 8, fid: 1, mid: 2, pids: [9], name: "D. Vijayarani", gender: "female", birthYear: "1972", place: "Salem" },
-            { id: 9, pids: [8], name: "G.V. Ramesh", gender: "male", birthYear: "1968", place: "Tiruppur" },
-            { id: 10, fid: 1, mid: 2, pids: [11], name: "D. Senthil Kumar", gender: "male", birthYear: "1975", place: "Salem" },
-            { id: 11, pids: [10], name: "S. Poornima", gender: "female", birthYear: "1982", place: "Trichy" },
-            { id: 6, fid: 3, mid: 4, name: "P.M. Karthik Jogaian", gender: "male", birthYear: "1997", place: "Bangalore" },
-            { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female", birthYear: "2001", place: "Salem" }
+            { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", deathYear: "", isDeceased: false, tags: [], place: "Salem", notes: "*" },
+            { id: 2, pids: [1], name: "D. Leelavathy", gender: "female", birthYear: "1945", deathYear: "", isDeceased: false, tags: [], place: "Salem" },
+            { id: 3, fid: 1, mid: 2, pids: [4], name: "D. Manivannan", gender: "male", birthYear: "1966", isDeceased: false, tags: [], place: "Salem" },
+            { id: 4, pids: [3], name: "K.V. Lakshmi", gender: "female", birthYear: "1972", isDeceased: false, tags: [], place: "Erode" },
+            { id: 5, fid: 1, mid: 2, pids: [7], name: "D. Sumathy", gender: "female", birthYear: "1969", isDeceased: false, tags: [], place: "Salem" },
+            { id: 7, pids: [5], name: "S. Sundaresan", gender: "male", birthYear: "1964", isDeceased: false, tags: [], place: "Coimbatore" },
+            { id: 8, fid: 1, mid: 2, pids: [9], name: "D. Vijayarani", gender: "female", birthYear: "1972", isDeceased: false, tags: [], place: "Salem" },
+            { id: 9, pids: [8], name: "G.V. Ramesh", gender: "male", birthYear: "1968", isDeceased: false, tags: [], place: "Tiruppur" },
+            { id: 10, fid: 1, mid: 2, pids: [11], name: "D. Senthil Kumar", gender: "male", birthYear: "1975", isDeceased: false, tags: [], place: "Salem" },
+            { id: 11, pids: [10], name: "S. Poornima", gender: "female", birthYear: "1982", isDeceased: false, tags: [], place: "Trichy" },
+            { id: 6, fid: 3, mid: 4, name: "P.M. Karthik Jogaian", gender: "male", birthYear: "1997", isDeceased: false, tags: [], place: "Bangalore" },
+            { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female", birthYear: "2001", isDeceased: false, tags: [], place: "Salem" }
         ];
 
         function showToast(msg) {
@@ -496,6 +533,17 @@
 
         familyData = loadLocalData();
 
+        // Helper to keep tags array in sync with isDeceased
+        function syncNodeTags(member) {
+            if (!member.tags) member.tags = [];
+            if (member.isDeceased) {
+                if (!member.tags.includes("deceased")) member.tags.push("deceased");
+            } else {
+                member.tags = member.tags.filter(t => t !== "deceased");
+            }
+        }
+        familyData.forEach(syncNodeTags);
+
         // --- 2. FAMILY TREE ENGINE CONFIGURATION ---
         let family = null;
 
@@ -509,14 +557,32 @@
                 mouseScrool: FamilyTree.action.zoom,
                 nodeBinding: {
                     field_0: "name",
+                    // Dynamic Lifespan & Details line
                     field_1: function(sender, node) {
                         const parts = [];
-                        if (node.birthYear) parts.push("b. " + node.birthYear);
+
+                        if (node.isDeceased) {
+                            if (node.birthYear && node.deathYear) {
+                                parts.push(`${node.birthYear} – ${node.deathYear}`);
+                            } else if (node.birthYear) {
+                                parts.push(`b. ${node.birthYear} (Late)`);
+                            } else {
+                                parts.push("Late");
+                            }
+                        } else {
+                            if (node.birthYear) parts.push("b. " + node.birthYear);
+                        }
+
                         if (node.place) parts.push(node.place);
                         if (node.notes) parts.push(node.notes);
                         return parts.join(" • ");
                     },
                     img_0: "photo"
+                },
+                tags: {
+                    deceased: {
+                        template: "john"
+                    }
                 },
                 nodes: familyData
             };
@@ -689,7 +755,6 @@
             statusSpan.innerText = "Optimizing...";
             saveBtn.disabled = true;
 
-            // Compress to maximum 400x400 JPG (~30KB-60KB)
             compressImage(file, 400, 400, (compressedBlob) => {
                 previewImg.src = URL.createObjectURL(compressedBlob);
                 statusSpan.innerText = "Uploading to Cloud...";
@@ -716,11 +781,17 @@
             });
         }
 
+        function toggleDeceasedFields(mode, isDeceased) {
+            const group = document.getElementById(mode === 'add' ? 'addPassingYearGroup' : 'editPassingYearGroup');
+            group.style.display = isDeceased ? 'block' : 'none';
+        }
+
         // --- 6. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
             if (!isAdmin) return;
 
             try {
+                familyData.forEach(syncNodeTags);
                 const jsonStr = JSON.stringify(familyData);
 
                 localStorage.setItem("thodar_family_data", jsonStr);
@@ -753,6 +824,7 @@
                 const cloudMembers = docSnapshot.data().members;
                 if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
                     familyData = cloudMembers;
+                    familyData.forEach(syncNodeTags);
                     if (family) family.load(familyData);
                     localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
                     if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
@@ -818,6 +890,9 @@
             document.getElementById('modalTitle').innerText = "Add Relative to " + (person ? person.name : "");
             document.getElementById('personName').value = "";
             document.getElementById('personBirth').value = "";
+            document.getElementById('personDeath').value = "";
+            document.getElementById('personDeceased').value = "false";
+            toggleDeceasedFields('add', false);
             document.getElementById('personPlace').value = "";
             document.getElementById('addPhotoUrl').value = "";
             document.getElementById('addPhotoPreview').src = "https://balkan.app/avatar/1.jpg";
@@ -842,7 +917,9 @@
 
             const relType = document.getElementById('relType').value;
             const gender = document.getElementById('personGender').value;
+            const isDeceased = document.getElementById('personDeceased').value === "true";
             const birthYear = document.getElementById('personBirth').value.trim();
+            const deathYear = isDeceased ? document.getElementById('personDeath').value.trim() : "";
             const place = document.getElementById('personPlace').value.trim();
             const photo = document.getElementById('addPhotoUrl').value.trim();
             const notes = document.getElementById('personNotes').value.trim();
@@ -851,8 +928,15 @@
             if (!target) return;
 
             const newId = Date.now();
-            const newMember = { id: newId, name: name, gender: gender };
+            const newMember = { 
+                id: newId, 
+                name: name, 
+                gender: gender,
+                isDeceased: isDeceased,
+                tags: isDeceased ? ["deceased"] : []
+            };
             if (birthYear) newMember.birthYear = birthYear;
+            if (deathYear) newMember.deathYear = deathYear;
             if (place) newMember.place = place;
             if (photo) newMember.photo = photo;
             if (notes) newMember.notes = notes;
@@ -921,10 +1005,15 @@
             document.getElementById('editModalTitle').innerText = "Edit " + person.name;
             document.getElementById('editPersonName').value = person.name || "";
             document.getElementById('editPersonGender').value = person.gender || "male";
+
+            const isDeceased = !!person.isDeceased;
+            document.getElementById('editPersonDeceased').value = isDeceased ? "true" : "false";
+            toggleDeceasedFields('edit', isDeceased);
+
             document.getElementById('editPersonBirth').value = person.birthYear || "";
+            document.getElementById('editPersonDeath').value = person.deathYear || "";
             document.getElementById('editPersonPlace').value = person.place || "";
             
-            // Photo & Preview
             const photoVal = person.photo || "";
             document.getElementById('editPhotoUrl').value = photoVal;
             document.getElementById('editPhotoPreview').src = photoVal ? photoVal : "https://balkan.app/avatar/1.jpg";
@@ -951,12 +1040,18 @@
             const person = familyData.find(m => m.id == selectedNodeId);
             if (!person) return;
 
+            const isDeceased = document.getElementById('editPersonDeceased').value === "true";
+
             person.name = name;
             person.gender = document.getElementById('editPersonGender').value;
+            person.isDeceased = isDeceased;
             person.birthYear = document.getElementById('editPersonBirth').value.trim();
+            person.deathYear = isDeceased ? document.getElementById('editPersonDeath').value.trim() : "";
             person.place = document.getElementById('editPersonPlace').value.trim();
             person.photo = document.getElementById('editPhotoUrl').value.trim();
             person.notes = document.getElementById('editPersonNotes').value.trim();
+
+            syncNodeTags(person);
 
             closeEditModal();
             family.load(familyData);
