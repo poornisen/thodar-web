@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Thodar Family Tree</title>
+
+    <!-- Firebase SDKs (Compat versions for direct browser / WebView usage) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <!-- Balkan FamilyTreeJS Engine -->
     <script src="https://balkan.app/js/FamilyTree.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -23,7 +30,7 @@
             height: 100%;
         }
 
-        /* Top Bar with Search */
+        /* Top Bar with Search & Sync Badge */
         #topBar {
             position: fixed;
             top: 12px;
@@ -32,7 +39,7 @@
             z-index: 1000;
             display: flex;
             align-items: center;
-            background: rgba(28, 28, 38, 0.85);
+            background: rgba(28, 28, 38, 0.88);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid #323247;
@@ -51,6 +58,15 @@
         }
         #searchInput::placeholder {
             color: #7b7b94;
+        }
+        #syncStatus {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(0, 123, 255, 0.2);
+            color: #4da3ff;
+            border: 1px solid rgba(0, 123, 255, 0.4);
+            white-space: nowrap;
         }
         #searchDropdown {
             display: none;
@@ -194,9 +210,10 @@
 </head>
 <body>
 
-    <!-- Top Search Bar -->
+    <!-- Top Bar with Search & Live Indicator -->
     <div id="topBar">
         <input type="text" id="searchInput" placeholder="Search relative by name..." oninput="handleSearch(this.value)" />
+        <span id="syncStatus">Cloud Ready</span>
     </div>
     <div id="searchDropdown"></div>
 
@@ -243,7 +260,7 @@
             </div>
             <div class="form-group">
                 <label>Notes / Markers</label>
-                <input type="text" id="personNotes" placeholder="e.g. * or brief note" />
+                <input type="text" id="personNotes" placeholder="e.g. *" />
             </div>
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
@@ -293,8 +310,27 @@
     </div>
 
     <script>
+        // --- 1. FIREBASE CONFIGURATION & INITIALIZATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVhyNh8RRs3hDGwaxeHDrCgwKXQ7QJZ0Q",
+            authDomain: "thodar-app.firebaseapp.com",
+            projectId: "thodar-app",
+            storageBucket: "thodar-app.firebasestorage.app",
+            messagingSenderId: "857665151422",
+            appId: "1:857665151422:web:0830eaa9ed71796b4059ef",
+            measurementId: "G-E557ZRL6CX"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Multi-tenant family tree identifier
+        const TENANT_ID = "thodar_devendran_01";
+        const treeDocRef = db.collection("trees").doc(TENANT_ID);
+
         let selectedNodeId = null;
 
+        // Default seed data used if cloud document is empty on first setup
         const defaultSeedData = [
             // Generation 1: Grandparents
             { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", place: "Salem", notes: "*" },
@@ -322,9 +358,17 @@
             setTimeout(() => { toast.className = ""; }, 2200);
         }
 
+        function setStatus(text, color) {
+            const status = document.getElementById("syncStatus");
+            if (status) {
+                status.innerText = text;
+                if (color) status.style.color = color;
+            }
+        }
+
         let familyData = [];
 
-        function loadSavedData() {
+        function loadLocalData() {
             try {
                 if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
                     const androidData = window.AndroidBridge.loadFamilyData();
@@ -337,31 +381,51 @@
                     return JSON.parse(webData);
                 }
             } catch (err) {
-                console.error("Error loading data:", err);
+                console.error("Local data load error:", err);
             }
             return JSON.parse(JSON.stringify(defaultSeedData));
         }
 
+        // --- 2. PERSISTENCE: BOTH LOCAL STORAGE & CLOUD FIRESTORE ---
         function saveToStorage() {
             try {
                 const jsonStr = JSON.stringify(familyData);
+
+                // 1. Immediate local cache write
                 localStorage.setItem("thodar_family_data", jsonStr);
                 if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                     window.AndroidBridge.saveFamilyData(jsonStr);
                 }
-                showToast("Saved Successfully");
+
+                // 2. Push to Firestore
+                setStatus("Syncing...", "#ffa500");
+                treeDocRef.set({
+                    treeName: "Devendran Family Lineage",
+                    tenantId: TENANT_ID,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    members: familyData
+                }, { merge: true })
+                .then(() => {
+                    setStatus("Cloud Synced", "#4da3ff");
+                    showToast("Cloud Synced");
+                })
+                .catch((err) => {
+                    console.error("Firestore sync error:", err);
+                    setStatus("Local Only (Offline)", "#ff6b6b");
+                    showToast("Saved Locally");
+                });
             } catch (err) {
                 console.error("Save error:", err);
             }
         }
 
-        familyData = loadSavedData();
+        // Initialize with local cache first for instant initial render
+        familyData = loadLocalData();
 
         const family = new FamilyTree(document.getElementById("tree"), {
             template: "john",
             mode: "dark",
             mouseScrool: FamilyTree.action.zoom,
-            // Single tap on card directly opens our robust edit modal
             nodeMouseClick: function(nodeId) {
                 openEditModal(nodeId);
             },
@@ -394,7 +458,31 @@
             nodes: familyData
         });
 
-        // Sync Balkan removal
+        // --- 3. REAL-TIME CLOUD LISTENER (AUTO-SYNC ACROSS ALL DEVICES) ---
+        treeDocRef.onSnapshot((docSnapshot) => {
+            if (docSnapshot.exists && docSnapshot.data().members) {
+                const cloudMembers = docSnapshot.data().members;
+                if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
+                    familyData = cloudMembers;
+                    family.load(familyData);
+                    // Update local cache
+                    localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
+                    if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                        window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+                    }
+                    showToast("Updated from Cloud");
+                }
+                setStatus("Cloud Synced", "#4da3ff");
+            } else {
+                // If cloud document is missing, publish seed data
+                saveToStorage();
+            }
+        }, (error) => {
+            console.warn("Firestore live listener offline:", error);
+            setStatus("Offline Mode", "#a0a0a0");
+        });
+
+        // Removal logic
         family.onRemoveNode(function(args) {
             const removeId = args.id;
             familyData = familyData.filter(item => item.id != removeId);
@@ -442,7 +530,6 @@
             });
         }
 
-        // Close search when clicking outside
         document.addEventListener("click", function(e) {
             const topBar = document.getElementById("topBar");
             const dropdown = document.getElementById("searchDropdown");
@@ -451,7 +538,7 @@
             }
         });
 
-        /* --- ADD RELATIVE MODAL LOGIC --- */
+        /* --- ADD RELATIVE MODAL --- */
         function openAddRelativeModal(nodeId) {
             selectedNodeId = nodeId;
             const person = familyData.find(m => m.id == nodeId);
@@ -550,7 +637,7 @@
             saveToStorage();
         }
 
-        /* --- EDIT DETAILS MODAL LOGIC (ROCK SOLID) --- */
+        /* --- EDIT DETAILS MODAL --- */
         function openEditModal(nodeId) {
             selectedNodeId = nodeId;
             const person = familyData.find(m => m.id == nodeId);
