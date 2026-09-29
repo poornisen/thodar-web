@@ -34,7 +34,7 @@
             height: 100%;
         }
 
-        /* Deceased Visual Treatment (Grayscale portrait + respectful muted border) */
+        /* Deceased Visual Treatment */
         .deceased image, .deceased img {
             filter: grayscale(100%) contrast(105%) !important;
             opacity: 0.88;
@@ -168,6 +168,36 @@
         #toast.show {
             visibility: visible;
             opacity: 1;
+        }
+
+        /* Quick Navigation Action Dock (Bottom Right) */
+        #actionDock {
+            position: fixed;
+            right: 14px;
+            bottom: 20px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .dock-btn {
+            background: rgba(28, 28, 38, 0.92);
+            border: 1px solid #3e3e58;
+            color: #d1d1e0;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        .dock-btn:active {
+            background: #007bff;
+            color: #ffffff;
         }
 
         /* Modals */
@@ -312,6 +342,16 @@
 
     <div id="tree"></div>
     <div id="toast">Saved</div>
+
+    <!-- Quick Navigation Action Dock -->
+    <div id="actionDock">
+        <button class="dock-btn" onclick="toggleExpandCollapseAll()">
+            <span id="expandAllIcon">⊟</span> <span id="expandAllText">Collapse Branches</span>
+        </button>
+        <button class="dock-btn" onclick="fitAndCenterTree()">
+            <span>⌂</span> Reset View
+        </button>
+    </div>
 
     <!-- Admin Authentication Modal -->
     <div id="authModal" class="modal-overlay">
@@ -488,7 +528,9 @@
         let isAdmin = false;
         let selectedNodeId = null;
 
-        // Default seed data with tags & deceased fields
+        // Tracks which parent node IDs have their branches collapsed
+        const collapsedParentIds = new Set();
+
         const defaultSeedData = [
             { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", deathYear: "", isDeceased: false, tags: [], place: "Salem", notes: "*" },
             { id: 2, pids: [1], name: "D. Leelavathy", gender: "female", birthYear: "1945", deathYear: "", isDeceased: false, tags: [], place: "Salem" },
@@ -533,7 +575,6 @@
 
         familyData = loadLocalData();
 
-        // Helper to keep tags array in sync with isDeceased
         function syncNodeTags(member) {
             if (!member.tags) member.tags = [];
             if (member.isDeceased) {
@@ -543,6 +584,53 @@
             }
         }
         familyData.forEach(syncNodeTags);
+
+        // Helper: Get direct children count for a person or couple
+        function getChildrenCount(personId) {
+            const person = familyData.find(m => m.id == personId);
+            if (!person) return 0;
+            const pids = person.pids || [];
+            return familyData.filter(m => (m.fid == personId || m.mid == personId) || 
+                                          (pids.includes(m.fid) || pids.includes(m.mid))).length;
+        }
+
+        // Helper: Recursively collect all descendant IDs of a parent
+        function getDescendantIds(parentId) {
+            const descendants = new Set();
+            const person = familyData.find(m => m.id == parentId);
+            const parentIds = [parentId];
+            if (person && person.pids) parentIds.push(...person.pids);
+
+            function findChildren(currentParentIds) {
+                const directChildren = familyData.filter(m => currentParentIds.includes(m.fid) || currentParentIds.includes(m.mid));
+                directChildren.forEach(child => {
+                    if (!descendants.has(child.id)) {
+                        descendants.add(child.id);
+                        const childAndSpouseIds = [child.id];
+                        if (child.pids) childAndSpouseIds.push(...child.pids);
+                        findChildren(childAndSpouseIds);
+                    }
+                });
+            }
+
+            findChildren(parentIds);
+            return descendants;
+        }
+
+        // Generates the visible nodes subset based on collapsed branches
+        function getVisibleNodes() {
+            if (collapsedParentIds.size === 0) {
+                return familyData;
+            }
+
+            const hiddenNodeIds = new Set();
+            collapsedParentIds.forEach(parentId => {
+                const branchDescendants = getDescendantIds(parentId);
+                branchDescendants.forEach(id => hiddenNodeIds.add(id));
+            });
+
+            return familyData.filter(m => !hiddenNodeIds.has(m.id));
+        }
 
         // --- 2. FAMILY TREE ENGINE CONFIGURATION ---
         let family = null;
@@ -555,9 +643,9 @@
                 template: "john",
                 mode: "dark",
                 mouseScrool: FamilyTree.action.zoom,
+                miniMap: true,
                 nodeBinding: {
                     field_0: "name",
-                    // Dynamic Lifespan & Details line
                     field_1: function(sender, node) {
                         const parts = [];
 
@@ -575,36 +663,59 @@
 
                         if (node.place) parts.push(node.place);
                         if (node.notes) parts.push(node.notes);
+
+                        // If branch is currently collapsed, display a clear indicator tag
+                        const count = getChildrenCount(node.id);
+                        if (count > 0 && (collapsedParentIds.has(node.id) || (node.pids && node.pids.some(p => collapsedParentIds.has(p))))) {
+                            parts.push(`[ ${count} Children Hidden ▼ ]`);
+                        }
+
                         return parts.join(" • ");
                     },
                     img_0: "photo"
                 },
                 tags: {
-                    deceased: {
-                        template: "john"
-                    }
+                    deceased: { template: "john" }
                 },
-                nodes: familyData
+                nodes: getVisibleNodes()
+            };
+
+            const menuItems = {
+                toggleBranch: {
+                    text: function(nodeId) {
+                        const count = getChildrenCount(nodeId);
+                        if (count === 0) return "No Children";
+                        const isCollapsed = collapsedParentIds.has(nodeId);
+                        return isCollapsed ? `Expand Branch (+${count})` : `Collapse Branch (-${count})`;
+                    },
+                    onClick: function(nodeId) {
+                        toggleSingleBranch(nodeId);
+                    }
+                }
             };
 
             if (isAdmin) {
                 treeConfig.nodeMouseClick = function(nodeId) {
                     openEditModal(nodeId);
                 };
-                treeConfig.nodeMenu = {
-                    addRel: {
-                        text: "Add Relative",
-                        onClick: function(nodeId) { openAddRelativeModal(nodeId); }
-                    },
-                    edit: {
-                        text: "Edit Details",
-                        onClick: function(nodeId) { openEditModal(nodeId); }
-                    },
-                    remove: { text: "Remove Person" }
+                menuItems.addRel = {
+                    text: "Add Relative",
+                    onClick: function(nodeId) { openAddRelativeModal(nodeId); }
                 };
+                menuItems.edit = {
+                    text: "Edit Details",
+                    onClick: function(nodeId) { openEditModal(nodeId); }
+                };
+                menuItems.remove = { text: "Remove Person" };
+                treeConfig.nodeMenu = menuItems;
             } else {
-                treeConfig.nodeMouseClick = FamilyTree.action.none;
-                treeConfig.nodeMenu = null;
+                treeConfig.nodeMouseClick = function(nodeId) {
+                    // In viewer mode, tapping a parent card directly toggles their branch!
+                    if (getChildrenCount(nodeId) > 0) {
+                        toggleSingleBranch(nodeId);
+                    }
+                };
+                treeConfig.nodeMenu = menuItems;
             }
 
             family = new FamilyTree(container, treeConfig);
@@ -627,7 +738,70 @@
 
         initFamilyTree();
 
-        // --- 3. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
+        // --- 3. DOCK CONTROLS (FUNCTIONAL EXPAND/COLLAPSE & RESET VIEW) ---
+        function toggleSingleBranch(parentId) {
+            const count = getChildrenCount(parentId);
+            if (count === 0) return;
+
+            if (collapsedParentIds.has(parentId)) {
+                collapsedParentIds.delete(parentId);
+                showToast("Branch Expanded");
+            } else {
+                collapsedParentIds.add(parentId);
+                showToast("Branch Collapsed");
+            }
+
+            family.load(getVisibleNodes());
+            updateDockButtonState();
+        }
+
+        function toggleExpandCollapseAll() {
+            const btnText = document.getElementById("expandAllText");
+            const btnIcon = document.getElementById("expandAllIcon");
+
+            // If some or none are collapsed, collapse all Generation 2 parents
+            if (collapsedParentIds.size === 0) {
+                familyData.forEach(member => {
+                    // Parents who have children and also have parents themselves (Generation 2)
+                    if (getChildrenCount(member.id) > 0 && (member.fid || member.mid)) {
+                        collapsedParentIds.add(member.id);
+                    }
+                });
+                showToast("Branches Collapsed");
+            } else {
+                // Expand everything
+                collapsedParentIds.clear();
+                showToast("All Branches Expanded");
+            }
+
+            family.load(getVisibleNodes());
+            updateDockButtonState();
+            fitAndCenterTree();
+        }
+
+        function updateDockButtonState() {
+            const btnText = document.getElementById("expandAllText");
+            const btnIcon = document.getElementById("expandAllIcon");
+            if (collapsedParentIds.size > 0) {
+                btnText.innerText = "Expand All";
+                btnIcon.innerText = "⊞";
+            } else {
+                btnText.innerText = "Collapse Branches";
+                btnIcon.innerText = "⊟";
+            }
+        }
+
+        // Centers and resets camera view smoothly
+        function fitAndCenterTree() {
+            if (!family) return;
+            // Center on generation 1 root (id: 1)
+            family.center(1, {
+                valign: FamilyTree.valign.center,
+                halign: FamilyTree.halign.center
+            });
+        }
+
+        // --- 4. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
         let tapCount = 0;
         let tapResetTimer = null;
 
@@ -650,7 +824,7 @@
             setTimeout(openAuthModal, 500);
         }
 
-        // --- 4. AUTHENTICATION ---
+        // --- 5. AUTHENTICATION ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
             const adminControls = document.getElementById("adminControls");
@@ -707,7 +881,7 @@
             });
         }
 
-        // --- 5. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
+        // --- 6. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
         function compressImage(file, maxWidth, maxHeight, callback) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -786,7 +960,7 @@
             group.style.display = isDeceased ? 'block' : 'none';
         }
 
-        // --- 6. CLOUD FIRESTORE PERSISTENCE ---
+        // --- 7. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
             if (!isAdmin) return;
 
@@ -818,14 +992,14 @@
             }
         }
 
-        // --- 7. REAL-TIME CLOUD LISTENER ---
+        // --- 8. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
             if (docSnapshot.exists && docSnapshot.data().members) {
                 const cloudMembers = docSnapshot.data().members;
                 if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
                     familyData = cloudMembers;
                     familyData.forEach(syncNodeTags);
-                    if (family) family.load(familyData);
+                    if (family) family.load(getVisibleNodes());
                     localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
                     if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                         window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
@@ -838,7 +1012,7 @@
             console.warn("Firestore live listener offline:", error);
         });
 
-        // Search & Jump logic
+        // Search & Jump logic with auto-expansion of collapsed ancestors
         function handleSearch(query) {
             const dropdown = document.getElementById("searchDropdown");
             if (!query || query.trim().length === 0) {
@@ -867,10 +1041,17 @@
             document.getElementById("searchDropdown").style.display = "none";
             document.getElementById("searchInput").value = "";
             if (family) {
-                family.center(nodeId, {
-                    valign: FamilyTree.valign.center,
-                    halign: FamilyTree.halign.center
-                });
+                // Ensure all parents are uncollapsed so the searched person is visible
+                collapsedParentIds.clear();
+                family.load(getVisibleNodes());
+                updateDockButtonState();
+
+                setTimeout(() => {
+                    family.center(nodeId, {
+                        valign: FamilyTree.valign.center,
+                        halign: FamilyTree.halign.center
+                    });
+                }, 150);
             }
         }
 
@@ -991,7 +1172,7 @@
             }
 
             closeAddModal();
-            family.load(familyData);
+            family.load(getVisibleNodes());
             saveToStorage();
         }
 
@@ -1054,7 +1235,7 @@
             syncNodeTags(person);
 
             closeEditModal();
-            family.load(familyData);
+            family.load(getVisibleNodes());
             saveToStorage();
         }
     </script>
