@@ -25,13 +25,15 @@
             overflow: hidden;
             background-color: #16161f;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
         }
         #tree {
             width: 100%;
             height: 100%;
         }
 
-        /* Top Bar with Search & Auth Controls */
+        /* Stealth Top Bar */
         #topBar {
             position: fixed;
             top: 12px;
@@ -49,6 +51,20 @@
             padding: 6px 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
+        /* Secret tap target */
+        #secretLogo {
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        #secretLogo svg {
+            width: 18px;
+            height: 18px;
+            fill: #7b7b94;
+        }
         #searchInput {
             flex: 1;
             background: transparent;
@@ -57,42 +73,36 @@
             font-size: 15px;
             outline: none;
             padding: 6px 8px;
-            min-width: 100px;
         }
         #searchInput::placeholder {
             color: #7b7b94;
         }
-        .bar-badge {
+
+        /* Admin Controls (Hidden by default, shown only when logged in) */
+        #adminControls {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-badge {
             font-size: 11px;
             padding: 4px 8px;
-            border-radius: 10px;
-            white-space: nowrap;
-        }
-        .badge-viewer {
-            background: rgba(160, 160, 180, 0.15);
-            color: #b0b0c8;
-            border: 1px solid #3d3d52;
-        }
-        .badge-admin {
+            border-radius: 8px;
             background: rgba(0, 123, 255, 0.2);
             color: #4da3ff;
             border: 1px solid rgba(0, 123, 255, 0.4);
+            white-space: nowrap;
         }
-        .top-btn {
-            background: #007bff;
-            color: #ffffff;
-            border: none;
+        .logout-btn {
+            background: #2c2c3d;
+            color: #d1d1e0;
+            border: 1px solid #44445c;
             border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 13px;
+            padding: 5px 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
-        }
-        .top-btn.btn-outline {
-            background: transparent;
-            border: 1px solid #4d4d68;
-            color: #d1d1e0;
         }
 
         #searchDropdown {
@@ -126,7 +136,7 @@
             color: #4da3ff;
         }
 
-        /* Status Toast */
+        /* Toast */
         #toast {
             visibility: hidden;
             min-width: 170px;
@@ -151,7 +161,7 @@
             opacity: 1;
         }
 
-        /* Modal Dialog Styling */
+        /* Modals */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -237,26 +247,32 @@
 </head>
 <body>
 
-    <!-- Top Bar with Search & Admin State -->
+    <!-- Top Search Bar (Clean viewer interface with secret icon tap target) -->
     <div id="topBar">
+        <div id="secretLogo" onclick="handleSecretTap()" title="">
+            <svg viewBox="0 0 24 24">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+        </div>
         <input type="text" id="searchInput" placeholder="Search relative by name..." oninput="handleSearch(this.value)" />
-        <span id="roleBadge" class="bar-badge badge-viewer">Viewer</span>
-        <button id="authBtn" class="top-btn" onclick="handleAuthButtonClick()">Admin Login</button>
+        
+        <!-- Only displayed when signed in as Admin -->
+        <div id="adminControls">
+            <span class="admin-badge">Admin</span>
+            <button class="logout-btn" onclick="signOutAdmin()">Sign Out</button>
+        </div>
     </div>
     <div id="searchDropdown"></div>
 
     <div id="tree"></div>
     <div id="toast">Saved</div>
 
-    <!-- Admin Authentication Modal -->
+    <!-- Secret Admin Authentication Modal -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 id="authTitle">Tree Admin Login</h3>
-            <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
-                Enter admin credentials to edit or add relatives. Viewers can browse without signing in.
-            </p>
+            <h3 id="authTitle">Admin Authentication</h3>
             <div class="form-group">
-                <label>Email Address</label>
+                <label>Admin Email</label>
                 <input type="email" id="authEmail" placeholder="admin@example.com" />
             </div>
             <div class="form-group">
@@ -266,9 +282,7 @@
             <div id="authError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
             <div class="modal-actions" style="justify-content: space-between;">
                 <button class="btn btn-cancel" onclick="closeAuthModal()">Close</button>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-save" onclick="performAuth('login')">Sign In</button>
-                </div>
+                <button class="btn btn-save" onclick="performAuth()">Authenticate</button>
             </div>
         </div>
     </div>
@@ -455,7 +469,7 @@
                 nodes: familyData
             };
 
-            // Only bind interactive edit controls if authenticated as Admin
+            // Interactive controls only enabled for Admin
             if (isAdmin) {
                 treeConfig.nodeMouseClick = function(nodeId) {
                     openEditModal(nodeId);
@@ -472,7 +486,6 @@
                     remove: { text: "Remove Person" }
                 };
             } else {
-                // Read-only / Viewer mode
                 treeConfig.nodeMouseClick = FamilyTree.action.none;
                 treeConfig.nodeMenu = null;
             }
@@ -497,49 +510,63 @@
 
         initFamilyTree();
 
-        // --- 3. AUTHENTICATION STATE & ROLE MANAGEMENT ---
+        // --- 3. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
+        let tapCount = 0;
+        let tapResetTimer = null;
+
+        function handleSecretTap() {
+            tapCount++;
+            clearTimeout(tapResetTimer);
+
+            // Require 7 taps within a rolling 3-second window
+            tapResetTimer = setTimeout(() => {
+                tapCount = 0;
+            }, 3000);
+
+            if (tapCount >= 7) {
+                tapCount = 0;
+                if (!isAdmin) {
+                    openAuthModal();
+                } else {
+                    showToast("Already in Admin Mode");
+                }
+            }
+        }
+
+        // Also allow URL hash access for convenience on browsers: e.g. thodar.html#admin
+        if (window.location.hash === "#admin") {
+            setTimeout(openAuthModal, 500);
+        }
+
+        // --- 4. AUTHENTICATION STATE & ROLE MANAGEMENT ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
-            const badge = document.getElementById("roleBadge");
-            const btn = document.getElementById("authBtn");
+            const adminControls = document.getElementById("adminControls");
 
             if (user) {
-                // Logged in as Admin
                 isAdmin = true;
-                badge.innerText = "Admin (" + (user.email ? user.email.split('@')[0] : 'User') + ")";
-                badge.className = "bar-badge badge-admin";
-                btn.innerText = "Sign Out";
-                btn.className = "top-btn btn-outline";
-                showToast("Signed in as Admin");
+                adminControls.style.display = "flex";
+                showToast("Admin Mode Activated");
             } else {
-                // Viewer / Read-only
                 isAdmin = false;
-                badge.innerText = "Viewer (Read-Only)";
-                badge.className = "bar-badge badge-viewer";
-                btn.innerText = "Admin Login";
-                btn.className = "top-btn";
+                adminControls.style.display = "none";
             }
 
-            // Re-render tree with appropriate permissions (enabling/disabling edit controls)
             initFamilyTree();
         });
 
-        function handleAuthButtonClick() {
-            if (currentUser) {
-                auth.signOut().then(() => {
-                    showToast("Signed out");
-                });
-            } else {
-                document.getElementById("authError").style.display = "none";
-                document.getElementById("authModal").style.display = "flex";
-            }
+        function openAuthModal() {
+            document.getElementById("authError").style.display = "none";
+            document.getElementById("authEmail").value = "";
+            document.getElementById("authPassword").value = "";
+            document.getElementById("authModal").style.display = "flex";
         }
 
         function closeAuthModal() {
             document.getElementById("authModal").style.display = "none";
         }
 
-        function performAuth(mode) {
+        function performAuth() {
             const email = document.getElementById("authEmail").value.trim();
             const password = document.getElementById("authPassword").value.trim();
             const errDiv = document.getElementById("authError");
@@ -553,6 +580,9 @@
             auth.signInWithEmailAndPassword(email, password)
                 .then(() => {
                     closeAuthModal();
+                    if (window.location.hash === "#admin") {
+                        history.replaceState(null, null, ' ');
+                    }
                 })
                 .catch(err => {
                     errDiv.innerText = err.message;
@@ -560,23 +590,24 @@
                 });
         }
 
-        // --- 4. CLOUD FIRESTORE PERSISTENCE ---
+        function signOutAdmin() {
+            auth.signOut().then(() => {
+                showToast("Returned to Viewer Mode");
+            });
+        }
+
+        // --- 5. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
-            if (!isAdmin) {
-                alert("Permission denied. Sign in as Admin to make changes.");
-                return;
-            }
+            if (!isAdmin) return;
 
             try {
                 const jsonStr = JSON.stringify(familyData);
 
-                // Local backup
                 localStorage.setItem("thodar_family_data", jsonStr);
                 if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                     window.AndroidBridge.saveFamilyData(jsonStr);
                 }
 
-                // Push to Firestore
                 treeDocRef.set({
                     treeName: "Devendran Family Lineage",
                     tenantId: TENANT_ID,
@@ -596,7 +627,7 @@
             }
         }
 
-        // --- 5. REAL-TIME CLOUD LISTENER ---
+        // --- 6. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
             if (docSnapshot.exists && docSnapshot.data().members) {
                 const cloudMembers = docSnapshot.data().members;
