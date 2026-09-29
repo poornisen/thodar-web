@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <!-- Balkan FamilyTreeJS Engine -->
     <script src="https://balkan.app/js/FamilyTree.js"></script>
@@ -51,7 +52,6 @@
             padding: 6px 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
-        /* Secret tap target */
         #secretLogo {
             cursor: pointer;
             padding: 4px;
@@ -78,7 +78,6 @@
             color: #7b7b94;
         }
 
-        /* Admin Controls (Hidden by default, shown only when logged in) */
         #adminControls {
             display: none;
             align-items: center;
@@ -221,6 +220,34 @@
         .form-row .form-group {
             flex: 1;
         }
+        .photo-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #181824;
+            border: 1px dashed #40405c;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .photo-preview {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #2b2b3d;
+            border: 1px solid #4a4a66;
+            flex-shrink: 0;
+        }
+        .photo-picker-actions {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .upload-status {
+            font-size: 11px;
+            color: #4da3ff;
+        }
         .modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -243,11 +270,21 @@
             background: #007bff;
             color: #ffffff;
         }
+        .btn-choose {
+            background: #333347;
+            color: #ffffff;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: 1px solid #4b4b66;
+            cursor: pointer;
+            width: fit-content;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Top Search Bar (Clean viewer interface with secret icon tap target) -->
+    <!-- Top Search Bar -->
     <div id="topBar">
         <div id="secretLogo" onclick="handleSecretTap()" title="">
             <svg viewBox="0 0 24 24">
@@ -256,7 +293,6 @@
         </div>
         <input type="text" id="searchInput" placeholder="Search relative by name..." oninput="handleSearch(this.value)" />
         
-        <!-- Only displayed when signed in as Admin -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
             <button class="logout-btn" onclick="signOutAdmin()">Sign Out</button>
@@ -267,7 +303,7 @@
     <div id="tree"></div>
     <div id="toast">Saved</div>
 
-    <!-- Secret Admin Authentication Modal -->
+    <!-- Admin Authentication Modal -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h3 id="authTitle">Admin Authentication</h3>
@@ -322,8 +358,16 @@
                 <input type="text" id="personPlace" placeholder="e.g. Salem, Chennai" />
             </div>
             <div class="form-group">
-                <label>Photo URL (Optional)</label>
-                <input type="text" id="personPhoto" placeholder="https://... or leave empty" />
+                <label>Profile Photo</label>
+                <div class="photo-picker-container">
+                    <img id="addPhotoPreview" class="photo-preview" src="https://balkan.app/avatar/1.jpg" alt="" />
+                    <div class="photo-picker-actions">
+                        <button type="button" class="btn-choose" onclick="document.getElementById('addPhotoFile').click()">Choose Photo</button>
+                        <span id="addUploadStatus" class="upload-status">Gallery / Files</span>
+                    </div>
+                </div>
+                <input type="file" id="addPhotoFile" accept="image/*" style="display: none;" onchange="handleImageSelection(this, 'add')" />
+                <input type="hidden" id="addPhotoUrl" />
             </div>
             <div class="form-group">
                 <label>Notes / Markers</label>
@@ -331,7 +375,7 @@
             </div>
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveRelative()">Add</button>
+                <button class="btn btn-save" id="addSaveBtn" onclick="saveRelative()">Add</button>
             </div>
         </div>
     </div>
@@ -362,8 +406,16 @@
                 <input type="text" id="editPersonPlace" placeholder="e.g. Salem" />
             </div>
             <div class="form-group">
-                <label>Photo URL</label>
-                <input type="text" id="editPersonPhoto" placeholder="https://..." />
+                <label>Profile Photo</label>
+                <div class="photo-picker-container">
+                    <img id="editPhotoPreview" class="photo-preview" src="https://balkan.app/avatar/1.jpg" alt="" />
+                    <div class="photo-picker-actions">
+                        <button type="button" class="btn-choose" onclick="document.getElementById('editPhotoFile').click()">Choose Photo</button>
+                        <span id="editUploadStatus" class="upload-status">Gallery / Files</span>
+                    </div>
+                </div>
+                <input type="file" id="editPhotoFile" accept="image/*" style="display: none;" onchange="handleImageSelection(this, 'edit')" />
+                <input type="hidden" id="editPhotoUrl" />
             </div>
             <div class="form-group">
                 <label>Notes / Markers</label>
@@ -371,7 +423,7 @@
             </div>
             <div class="modal-actions">
                 <button class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
-                <button class="btn btn-save" onclick="savePersonEdits()">Save Changes</button>
+                <button class="btn btn-save" id="editSaveBtn" onclick="savePersonEdits()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -391,6 +443,7 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
         const TENANT_ID = "thodar_devendran_01";
         const treeDocRef = db.collection("trees").doc(TENANT_ID);
@@ -399,7 +452,6 @@
         let isAdmin = false;
         let selectedNodeId = null;
 
-        // Default seed data
         const defaultSeedData = [
             { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", place: "Salem", notes: "*" },
             { id: 2, pids: [1], name: "D. Leelavathy", gender: "female", birthYear: "1945", place: "Salem" },
@@ -469,7 +521,6 @@
                 nodes: familyData
             };
 
-            // Interactive controls only enabled for Admin
             if (isAdmin) {
                 treeConfig.nodeMouseClick = function(nodeId) {
                     openEditModal(nodeId);
@@ -517,11 +568,7 @@
         function handleSecretTap() {
             tapCount++;
             clearTimeout(tapResetTimer);
-
-            // Require 7 taps within a rolling 3-second window
-            tapResetTimer = setTimeout(() => {
-                tapCount = 0;
-            }, 3000);
+            tapResetTimer = setTimeout(() => { tapCount = 0; }, 3000);
 
             if (tapCount >= 7) {
                 tapCount = 0;
@@ -533,12 +580,11 @@
             }
         }
 
-        // Also allow URL hash access for convenience on browsers: e.g. thodar.html#admin
         if (window.location.hash === "#admin") {
             setTimeout(openAuthModal, 500);
         }
 
-        // --- 4. AUTHENTICATION STATE & ROLE MANAGEMENT ---
+        // --- 4. AUTHENTICATION ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
             const adminControls = document.getElementById("adminControls");
@@ -551,7 +597,6 @@
                 isAdmin = false;
                 adminControls.style.display = "none";
             }
-
             initFamilyTree();
         });
 
@@ -596,7 +641,82 @@
             });
         }
 
-        // --- 5. CLOUD FIRESTORE PERSISTENCE ---
+        // --- 5. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
+        function compressImage(file, maxWidth, maxHeight, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        callback(blob);
+                    }, "image/jpeg", 0.82);
+                };
+            };
+        }
+
+        function handleImageSelection(fileInput, mode) {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const previewImg = document.getElementById(mode + "PhotoPreview");
+            const statusSpan = document.getElementById(mode + "UploadStatus");
+            const hiddenUrl = document.getElementById(mode + "PhotoUrl");
+            const saveBtn = document.getElementById(mode + "SaveBtn");
+
+            statusSpan.innerText = "Optimizing...";
+            saveBtn.disabled = true;
+
+            // Compress to maximum 400x400 JPG (~30KB-60KB)
+            compressImage(file, 400, 400, (compressedBlob) => {
+                previewImg.src = URL.createObjectURL(compressedBlob);
+                statusSpan.innerText = "Uploading to Cloud...";
+
+                const uploadNodeId = (mode === "edit") ? selectedNodeId : ("temp_" + Date.now());
+                const storageRef = storage.ref(`trees/${TENANT_ID}/avatars/${uploadNodeId}.jpg`);
+
+                storageRef.put(compressedBlob)
+                    .then(snapshot => snapshot.ref.getDownloadURL())
+                    .then(downloadURL => {
+                        hiddenUrl.value = downloadURL;
+                        statusSpan.innerText = "Uploaded ✓";
+                        statusSpan.style.color = "#4ade80";
+                        saveBtn.disabled = false;
+                        showToast("Photo Uploaded");
+                    })
+                    .catch(err => {
+                        console.error("Upload error:", err);
+                        statusSpan.innerText = "Upload failed";
+                        statusSpan.style.color = "#ff6b6b";
+                        saveBtn.disabled = false;
+                        alert("Storage upload error: " + err.message);
+                    });
+            });
+        }
+
+        // --- 6. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
             if (!isAdmin) return;
 
@@ -627,7 +747,7 @@
             }
         }
 
-        // --- 6. REAL-TIME CLOUD LISTENER ---
+        // --- 7. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
             if (docSnapshot.exists && docSnapshot.data().members) {
                 const cloudMembers = docSnapshot.data().members;
@@ -699,7 +819,10 @@
             document.getElementById('personName').value = "";
             document.getElementById('personBirth').value = "";
             document.getElementById('personPlace').value = "";
-            document.getElementById('personPhoto').value = "";
+            document.getElementById('addPhotoUrl').value = "";
+            document.getElementById('addPhotoPreview').src = "https://balkan.app/avatar/1.jpg";
+            document.getElementById('addUploadStatus').innerText = "Gallery / Files";
+            document.getElementById('addUploadStatus').style.color = "#4da3ff";
             document.getElementById('personNotes').value = "";
             document.getElementById('addModal').style.display = "flex";
         }
@@ -721,7 +844,7 @@
             const gender = document.getElementById('personGender').value;
             const birthYear = document.getElementById('personBirth').value.trim();
             const place = document.getElementById('personPlace').value.trim();
-            const photo = document.getElementById('personPhoto').value.trim();
+            const photo = document.getElementById('addPhotoUrl').value.trim();
             const notes = document.getElementById('personNotes').value.trim();
             const target = familyData.find(m => m.id == selectedNodeId);
 
@@ -800,9 +923,15 @@
             document.getElementById('editPersonGender').value = person.gender || "male";
             document.getElementById('editPersonBirth').value = person.birthYear || "";
             document.getElementById('editPersonPlace').value = person.place || "";
-            document.getElementById('editPersonPhoto').value = person.photo || "";
-            document.getElementById('editPersonNotes').value = person.notes || "";
+            
+            // Photo & Preview
+            const photoVal = person.photo || "";
+            document.getElementById('editPhotoUrl').value = photoVal;
+            document.getElementById('editPhotoPreview').src = photoVal ? photoVal : "https://balkan.app/avatar/1.jpg";
+            document.getElementById('editUploadStatus').innerText = photoVal ? "Current Photo Set" : "Gallery / Files";
+            document.getElementById('editUploadStatus').style.color = "#a0a0b8";
 
+            document.getElementById('editPersonNotes').value = person.notes || "";
             document.getElementById('editModal').style.display = "flex";
         }
 
@@ -826,7 +955,7 @@
             person.gender = document.getElementById('editPersonGender').value;
             person.birthYear = document.getElementById('editPersonBirth').value.trim();
             person.place = document.getElementById('editPersonPlace').value.trim();
-            person.photo = document.getElementById('editPersonPhoto').value.trim();
+            person.photo = document.getElementById('editPhotoUrl').value.trim();
             person.notes = document.getElementById('editPersonNotes').value.trim();
 
             closeEditModal();
