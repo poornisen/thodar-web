@@ -44,10 +44,59 @@
             stroke-dasharray: 4, 2;
         }
 
-        /* Top Bar with Search & Lineage Perspective Filter */
+        /* Header Bar: Family Tree Title + Global Exit / Close Button */
+        #topHeader {
+            position: fixed;
+            top: 8px;
+            left: 12px;
+            right: 12px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 4px;
+        }
+        #treeTitleHeader {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #treeTitleHeader::before {
+            content: "🌿";
+            font-size: 14px;
+        }
+        .exit-btn {
+            background: rgba(220, 53, 69, 0.22);
+            border: 1px solid rgba(220, 53, 69, 0.55);
+            color: #ff6b6b;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+        .exit-btn:active {
+            background: rgba(220, 53, 69, 0.45);
+            color: #ffffff;
+        }
+
+        /* Sub-Header: Search & Lineage Perspective Filter */
         #topBar {
             position: fixed;
-            top: 12px;
+            top: 40px;
             left: 12px;
             right: 12px;
             z-index: 1000;
@@ -132,7 +181,7 @@
         #searchDropdown {
             display: none;
             position: fixed;
-            top: 62px;
+            top: 92px;
             left: 12px;
             right: 12px;
             background: #212130;
@@ -185,7 +234,7 @@
             opacity: 1;
         }
 
-        /* Single Floating Collapse/Expand Button (Bottom Right) */
+        /* Floating Collapse/Expand Button (Bottom Right) */
         #collapseDock {
             position: fixed;
             right: 14px;
@@ -336,7 +385,15 @@
 </head>
 <body>
 
-    <!-- Top Search Bar & Perspective View Selector -->
+    <!-- Header: Family Tree Title + Exit Button -->
+    <div id="topHeader">
+        <div id="treeTitleHeader">Devendran Family Lineage</div>
+        <button class="exit-btn" onclick="handleExitSession()" title="Exit & Lock Tree">
+            <span>⏻</span> Exit
+        </button>
+    </div>
+
+    <!-- Sub-Bar: Search & Lineage Perspective Filter -->
     <div id="topBar">
         <div id="secretLogo" onclick="handleSecretTap()" title="">
             <svg viewBox="0 0 24 24">
@@ -372,7 +429,7 @@
         </button>
     </div>
 
-    <!-- 1. Passcode Unlock Gatekeeper (For Visitors / First time on device) -->
+    <!-- 1. Passcode Unlock Gatekeeper (Every Launch / Non-Persistent Session) -->
     <div id="passcodeModal" class="modal-overlay" style="display: none;">
         <div class="modal-box" style="text-align: center;">
             <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
@@ -391,7 +448,7 @@
         </div>
     </div>
 
-    <!-- 2. Dedicated Passcode Manager Modal (For Admin) -->
+    <!-- 2. Dedicated Passcode Manager Modal (Admin Only) -->
     <div id="managePasscodeModal" class="modal-overlay">
         <div class="modal-box">
             <h3>Family Access Passcode</h3>
@@ -701,7 +758,23 @@
                 .catch(err => alert("Error updating passcode: " + err.message));
         }
 
-        // --- 3. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
+        // --- 3. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
+        function handleExitSession() {
+            isPasscodeUnlocked = false;
+            if (isAdmin) {
+                auth.signOut().catch(() => {});
+            }
+            document.getElementById("passcodeModal").style.display = "flex";
+            document.getElementById("inputPasscode").value = "";
+            showToast("Session Locked & Exited");
+
+            // If running inside Android WebView and Bridge exposes closeApp
+            if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
+                window.AndroidBridge.closeApp();
+            }
+        }
+
+        // --- 4. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
         function getChildrenCount(personId) {
             const person = familyData.find(m => m.id == personId);
             if (!person) return 0;
@@ -804,7 +877,7 @@
             }
         }
 
-        // --- 4. COLLAPSE / EXPAND CONTROLS ---
+        // --- 5. COLLAPSE / EXPAND CONTROLS ---
         function toggleSingleBranch(parentId) {
             const count = getChildrenCount(parentId);
             if (count === 0) return;
@@ -850,7 +923,7 @@
             }
         }
 
-        // --- 5. FAMILY TREE ENGINE CONFIGURATION ---
+        // --- 6. FAMILY TREE ENGINE CONFIGURATION ---
         let family = null;
 
         function initFamilyTree() {
@@ -952,7 +1025,7 @@
             }
         }
 
-        // --- 6. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
+        // --- 7. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
         let tapCount = 0;
         let tapResetTimer = null;
 
@@ -975,7 +1048,7 @@
             setTimeout(openAuthModal, 500);
         }
 
-        // --- 7. AUTHENTICATION & ADMIN CONTROLS ---
+        // --- 8. AUTHENTICATION & ADMIN CONTROLS ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
             const adminControls = document.getElementById("adminControls");
@@ -1021,7 +1094,6 @@
                     closeAuthModal();
                     if (newCode) {
                         cloudPasscode = newCode;
-                        
                         treeDocRef.set({ passcode: newCode }, { merge: true });
                     }
                     if (window.location.hash === "#admin") {
@@ -1040,7 +1112,7 @@
             });
         }
 
-        // --- 8. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
+        // --- 9. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
         function compressImage(file, maxWidth, maxHeight, callback) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -1119,7 +1191,7 @@
             group.style.display = isDeceased ? 'block' : 'none';
         }
 
-        // --- 9. CLOUD FIRESTORE PERSISTENCE ---
+        // --- 10. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
             if (!isAdmin) return;
 
@@ -1152,14 +1224,16 @@
             }
         }
 
-        // --- 10. REAL-TIME CLOUD LISTENER ---
+        // --- 11. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
+                if (data.treeName) {
+                    document.getElementById("treeTitleHeader").innerText = data.treeName;
+                }
                 if (data.passcode) {
                     cloudPasscode = data.passcode;
                 } else if (isAdmin) {
-                    // Seed initial passcode if missing
                     treeDocRef.set({ passcode: "1938" }, { merge: true });
                 }
 
