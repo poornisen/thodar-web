@@ -44,7 +44,7 @@
             stroke-dasharray: 4, 2;
         }
 
-        /* Stealth Top Bar */
+        /* Top Bar with Search & Lineage Perspective Filter */
         #topBar {
             position: fixed;
             top: 12px;
@@ -54,12 +54,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(28, 28, 38, 0.9);
+            background: rgba(28, 28, 38, 0.92);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid #323247;
             border-radius: 12px;
-            padding: 6px 12px;
+            padding: 6px 10px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
         #secretLogo {
@@ -80,34 +80,49 @@
             background: transparent;
             border: none;
             color: #ffffff;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
-            padding: 6px 8px;
+            padding: 6px 6px;
+            min-width: 80px;
         }
         #searchInput::placeholder {
             color: #7b7b94;
         }
 
+        /* Lineage Perspective Dropdown */
+        #viewFilterSelect {
+            background: #232332;
+            color: #d1d1e0;
+            border: 1px solid #43435c;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 8px;
+            outline: none;
+            cursor: pointer;
+            max-width: 155px;
+        }
+
         #adminControls {
             display: none;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .admin-badge {
             font-size: 11px;
-            padding: 4px 8px;
+            padding: 4px 7px;
             border-radius: 8px;
             background: rgba(0, 123, 255, 0.2);
             color: #4da3ff;
             border: 1px solid rgba(0, 123, 255, 0.4);
             white-space: nowrap;
         }
-        .logout-btn {
+        .admin-btn {
             background: #2c2c3d;
             color: #d1d1e0;
             border: 1px solid #44445c;
             border-radius: 8px;
-            padding: 5px 10px;
+            padding: 5px 8px;
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
@@ -170,19 +185,16 @@
             opacity: 1;
         }
 
-        /* Quick Navigation Action Dock (Bottom Right) */
-        #actionDock {
+        /* Single Floating Collapse/Expand Button (Bottom Right) */
+        #collapseDock {
             position: fixed;
             right: 14px;
             bottom: 20px;
             z-index: 999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
         }
-        .dock-btn {
+        .collapse-btn {
             background: rgba(28, 28, 38, 0.92);
-            border: 1px solid #3e3e58;
+            border: 1px solid #43435e;
             color: #d1d1e0;
             border-radius: 10px;
             padding: 9px 14px;
@@ -195,7 +207,7 @@
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
         }
-        .dock-btn:active {
+        .collapse-btn:active {
             background: #007bff;
             color: #ffffff;
         }
@@ -208,7 +220,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
             z-index: 9999;
             align-items: center;
             justify-content: center;
@@ -222,8 +234,8 @@
             max-width: 380px;
             max-height: 90vh;
             overflow-y: auto;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            padding: 22px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
             color: #ffffff;
         }
         .modal-box h3 {
@@ -324,18 +336,28 @@
 </head>
 <body>
 
-    <!-- Top Search Bar -->
+    <!-- Top Search Bar & Perspective View Selector -->
     <div id="topBar">
         <div id="secretLogo" onclick="handleSecretTap()" title="">
             <svg viewBox="0 0 24 24">
                 <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
             </svg>
         </div>
-        <input type="text" id="searchInput" placeholder="Search relative by name..." oninput="handleSearch(this.value)" />
+        <input type="text" id="searchInput" placeholder="Search relative..." oninput="handleSearch(this.value)" />
+
+        <!-- Lineage Filter Dropdown -->
+        <select id="viewFilterSelect" onchange="changeLineageView(this.value)">
+            <option value="all">Full Family Tree</option>
+            <option value="blood_only">Blood Lineage (No In-Laws)</option>
+            <option value="males_with_wives">Paternal Line (With Wives)</option>
+            <option value="males_only">Direct Paternal (Males Only)</option>
+        </select>
         
+        <!-- Admin Controls Toolbar -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
-            <button class="logout-btn" onclick="signOutAdmin()">Sign Out</button>
+            <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
+            <button class="admin-btn" onclick="signOutAdmin()">Sign Out</button>
         </div>
     </div>
     <div id="searchDropdown"></div>
@@ -343,17 +365,51 @@
     <div id="tree"></div>
     <div id="toast">Saved</div>
 
-    <!-- Quick Navigation Action Dock -->
-    <div id="actionDock">
-        <button class="dock-btn" onclick="toggleExpandCollapseAll()">
+    <!-- Floating Collapse / Expand Branches Button -->
+    <div id="collapseDock">
+        <button class="collapse-btn" onclick="toggleExpandCollapseAll()">
             <span id="expandAllIcon">⊟</span> <span id="expandAllText">Collapse Branches</span>
-        </button>
-        <button class="dock-btn" onclick="fitAndCenterTree()">
-            <span>⌂</span> Reset View
         </button>
     </div>
 
-    <!-- Admin Authentication Modal -->
+    <!-- 1. Passcode Unlock Gatekeeper (For Visitors / First time on device) -->
+    <div id="passcodeModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box" style="text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+            <h3 style="margin-bottom: 6px;">Private Family Tree</h3>
+            <p style="font-size: 13px; color: #a0a0b8; margin-top: 0; margin-bottom: 18px;">
+                This lineage is private. Please enter the family passcode to unlock access.
+            </p>
+            <div class="form-group" style="text-align: left;">
+                <label>Family Passcode</label>
+                <input type="password" id="inputPasscode" placeholder="Enter passcode" onkeydown="if(event.key==='Enter') verifyPasscode()" />
+            </div>
+            <div id="passcodeError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
+            <div class="modal-actions" style="justify-content: center;">
+                <button class="btn btn-save" style="width: 100%;" onclick="verifyPasscode()">Unlock Tree</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Dedicated Passcode Manager Modal (For Admin) -->
+    <div id="managePasscodeModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Family Access Passcode</h3>
+            <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
+                View or change the secret passcode required for family members to view this tree.
+            </p>
+            <div class="form-group">
+                <label>Current Passcode</label>
+                <input type="text" id="managePasscodeField" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closePasscodeManager()">Cancel</button>
+                <button class="btn btn-save" onclick="saveNewPasscode()">Save Passcode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Admin Authentication Modal (Stealth 7-Tap) -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h3 id="authTitle">Admin Authentication</h3>
@@ -364,6 +420,10 @@
             <div class="form-group">
                 <label>Password</label>
                 <input type="password" id="authPassword" placeholder="••••••••" />
+            </div>
+            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 12px;">
+                <label style="color: #4da3ff;">Set / Update Family Passcode</label>
+                <input type="text" id="adminNewPasscode" placeholder="e.g. 1938" />
             </div>
             <div id="authError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
             <div class="modal-actions" style="justify-content: space-between;">
@@ -505,7 +565,7 @@
     </div>
 
     <script>
-        // --- 1. FIREBASE INITIALIZATION ---
+        // --- 1. FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyDVhyNh8RRs3hDGwaxeHDrCgwKXQ7QJZ0Q",
             authDomain: "thodar-app.firebaseapp.com",
@@ -527,8 +587,9 @@
         let currentUser = null;
         let isAdmin = false;
         let selectedNodeId = null;
+        let currentFilterMode = "all";
+        let cloudPasscode = "1938";
 
-        // Tracks which parent node IDs have their branches collapsed
         const collapsedParentIds = new Set();
 
         const defaultSeedData = [
@@ -585,7 +646,62 @@
         }
         familyData.forEach(syncNodeTags);
 
-        // Helper: Get direct children count for a person or couple
+        // --- 2. SESSION-ONLY PASSCODE GATEKEEPER (ZERO LOCAL PERSISTENCE) ---
+        let isPasscodeUnlocked = false;
+
+        function checkPasscodeAuthorization() {
+            // Admin is always authorized
+            if (isAdmin || isPasscodeUnlocked) {
+                document.getElementById("passcodeModal").style.display = "none";
+                return true;
+            } else {
+                document.getElementById("passcodeModal").style.display = "flex";
+                return false;
+            }
+        }
+
+        function verifyPasscode() {
+            const inputVal = document.getElementById("inputPasscode").value.trim();
+            const errDiv = document.getElementById("passcodeError");
+
+            if (inputVal === cloudPasscode) {
+                isPasscodeUnlocked = true;
+                document.getElementById("passcodeModal").style.display = "none";
+                document.getElementById("inputPasscode").value = "";
+                errDiv.style.display = "none";
+                showToast("Access Granted");
+                initFamilyTree();
+            } else {
+                errDiv.innerText = "Incorrect passcode. Please try again.";
+                errDiv.style.display = "block";
+            }
+        }
+
+        function openPasscodeManager() {
+            document.getElementById("managePasscodeField").value = cloudPasscode;
+            document.getElementById("managePasscodeModal").style.display = "flex";
+        }
+
+        function closePasscodeManager() {
+            document.getElementById("managePasscodeModal").style.display = "none";
+        }
+
+        function saveNewPasscode() {
+            const newCode = document.getElementById("managePasscodeField").value.trim();
+            if (!newCode) {
+                alert("Passcode cannot be empty.");
+                return;
+            }
+            cloudPasscode = newCode;
+            treeDocRef.set({ passcode: newCode }, { merge: true })
+                .then(() => {
+                    closePasscodeManager();
+                    showToast("Passcode Updated: " + newCode);
+                })
+                .catch(err => alert("Error updating passcode: " + err.message));
+        }
+
+        // --- 3. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
         function getChildrenCount(personId) {
             const person = familyData.find(m => m.id == personId);
             if (!person) return 0;
@@ -594,7 +710,6 @@
                                           (pids.includes(m.fid) || pids.includes(m.mid))).length;
         }
 
-        // Helper: Recursively collect all descendant IDs of a parent
         function getDescendantIds(parentId) {
             const descendants = new Set();
             const person = familyData.find(m => m.id == parentId);
@@ -617,22 +732,125 @@
             return descendants;
         }
 
-        // Generates the visible nodes subset based on collapsed branches
-        function getVisibleNodes() {
-            if (collapsedParentIds.size === 0) {
-                return familyData;
+        function filterTreeData(mode) {
+            let workingSet = JSON.parse(JSON.stringify(familyData));
+            const rootFounderId = 1;
+
+            if (mode === "blood_only") {
+                const bloodMembers = workingSet.filter(m => (m.id === rootFounderId) || m.fid || m.mid);
+                const bloodIds = new Set(bloodMembers.map(m => m.id));
+                bloodMembers.forEach(m => {
+                    if (m.pids) m.pids = m.pids.filter(pid => bloodIds.has(pid));
+                });
+                workingSet = bloodMembers;
+            } else if (mode === "males_with_wives") {
+                const keptIds = new Set();
+                keptIds.add(rootFounderId);
+
+                function collectMaleLine(fatherId) {
+                    const sons = workingSet.filter(m => (m.fid === fatherId || m.mid === fatherId) && m.gender === "male");
+                    sons.forEach(son => {
+                        keptIds.add(son.id);
+                        if (son.pids) son.pids.forEach(wifeId => keptIds.add(wifeId));
+                        collectMaleLine(son.id);
+                    });
+                }
+                collectMaleLine(rootFounderId);
+
+                const founder = workingSet.find(m => m.id === rootFounderId);
+                if (founder && founder.pids) founder.pids.forEach(pid => keptIds.add(pid));
+
+                const filtered = workingSet.filter(m => keptIds.has(m.id));
+                filtered.forEach(m => {
+                    if (m.pids) m.pids = m.pids.filter(pid => keptIds.has(pid));
+                });
+                workingSet = filtered;
+            } else if (mode === "males_only") {
+                const keptMaleIds = new Set();
+                keptMaleIds.add(rootFounderId);
+
+                function collectStrictMales(fatherId) {
+                    const sons = workingSet.filter(m => (m.fid === fatherId || m.mid === fatherId) && m.gender === "male");
+                    sons.forEach(son => {
+                        keptMaleIds.add(son.id);
+                        collectStrictMales(son.id);
+                    });
+                }
+                collectStrictMales(rootFounderId);
+
+                const malesOnly = workingSet.filter(m => keptMaleIds.has(m.id));
+                malesOnly.forEach(m => { m.pids = []; });
+                workingSet = malesOnly;
             }
 
-            const hiddenNodeIds = new Set();
-            collapsedParentIds.forEach(parentId => {
-                const branchDescendants = getDescendantIds(parentId);
-                branchDescendants.forEach(id => hiddenNodeIds.add(id));
-            });
+            // Apply branch collapsing on top of the perspective filter
+            if (collapsedParentIds.size > 0) {
+                const hiddenNodeIds = new Set();
+                collapsedParentIds.forEach(parentId => {
+                    const branchDescendants = getDescendantIds(parentId);
+                    branchDescendants.forEach(id => hiddenNodeIds.add(id));
+                });
+                workingSet = workingSet.filter(m => !hiddenNodeIds.has(m.id));
+            }
 
-            return familyData.filter(m => !hiddenNodeIds.has(m.id));
+            return workingSet;
         }
 
-        // --- 2. FAMILY TREE ENGINE CONFIGURATION ---
+        function changeLineageView(mode) {
+            currentFilterMode = mode;
+            if (family) {
+                family.load(filterTreeData(mode));
+                showToast("View Updated");
+            }
+        }
+
+        // --- 4. COLLAPSE / EXPAND CONTROLS ---
+        function toggleSingleBranch(parentId) {
+            const count = getChildrenCount(parentId);
+            if (count === 0) return;
+
+            if (collapsedParentIds.has(parentId)) {
+                collapsedParentIds.delete(parentId);
+                showToast("Branch Expanded");
+            } else {
+                collapsedParentIds.add(parentId);
+                showToast("Branch Collapsed");
+            }
+
+            family.load(filterTreeData(currentFilterMode));
+            updateDockButtonState();
+        }
+
+        function toggleExpandCollapseAll() {
+            if (collapsedParentIds.size === 0) {
+                familyData.forEach(member => {
+                    if (getChildrenCount(member.id) > 0 && (member.fid || member.mid)) {
+                        collapsedParentIds.add(member.id);
+                    }
+                });
+                showToast("Branches Collapsed");
+            } else {
+                collapsedParentIds.clear();
+                showToast("All Branches Expanded");
+            }
+
+            family.load(filterTreeData(currentFilterMode));
+            updateDockButtonState();
+        }
+
+        function updateDockButtonState() {
+            const btnText = document.getElementById("expandAllText");
+            const btnIcon = document.getElementById("expandAllIcon");
+            if (collapsedParentIds.size > 0) {
+                btnText.innerText = "Expand All";
+                btnIcon.innerText = "⊞";
+            } else {
+                btnText.innerText = "Collapse Branches";
+                btnIcon.innerText = "⊟";
+            }
+        }
+
+        // --- 5. FAMILY TREE ENGINE CONFIGURATION ---
         let family = null;
 
         function initFamilyTree() {
@@ -643,7 +861,6 @@
                 template: "john",
                 mode: "dark",
                 mouseScrool: FamilyTree.action.zoom,
-                miniMap: true,
                 nodeBinding: {
                     field_0: "name",
                     field_1: function(sender, node) {
@@ -664,7 +881,7 @@
                         if (node.place) parts.push(node.place);
                         if (node.notes) parts.push(node.notes);
 
-                        // If branch is currently collapsed, display a clear indicator tag
+                        // If branch is currently collapsed, display badge
                         const count = getChildrenCount(node.id);
                         if (count > 0 && (collapsedParentIds.has(node.id) || (node.pids && node.pids.some(p => collapsedParentIds.has(p))))) {
                             parts.push(`[ ${count} Children Hidden ▼ ]`);
@@ -677,7 +894,7 @@
                 tags: {
                     deceased: { template: "john" }
                 },
-                nodes: getVisibleNodes()
+                nodes: filterTreeData(currentFilterMode)
             };
 
             const menuItems = {
@@ -710,7 +927,6 @@
                 treeConfig.nodeMenu = menuItems;
             } else {
                 treeConfig.nodeMouseClick = function(nodeId) {
-                    // In viewer mode, tapping a parent card directly toggles their branch!
                     if (getChildrenCount(nodeId) > 0) {
                         toggleSingleBranch(nodeId);
                     }
@@ -736,72 +952,7 @@
             }
         }
 
-        initFamilyTree();
-
-        // --- 3. DOCK CONTROLS (FUNCTIONAL EXPAND/COLLAPSE & RESET VIEW) ---
-        function toggleSingleBranch(parentId) {
-            const count = getChildrenCount(parentId);
-            if (count === 0) return;
-
-            if (collapsedParentIds.has(parentId)) {
-                collapsedParentIds.delete(parentId);
-                showToast("Branch Expanded");
-            } else {
-                collapsedParentIds.add(parentId);
-                showToast("Branch Collapsed");
-            }
-
-            family.load(getVisibleNodes());
-            updateDockButtonState();
-        }
-
-        function toggleExpandCollapseAll() {
-            const btnText = document.getElementById("expandAllText");
-            const btnIcon = document.getElementById("expandAllIcon");
-
-            // If some or none are collapsed, collapse all Generation 2 parents
-            if (collapsedParentIds.size === 0) {
-                familyData.forEach(member => {
-                    // Parents who have children and also have parents themselves (Generation 2)
-                    if (getChildrenCount(member.id) > 0 && (member.fid || member.mid)) {
-                        collapsedParentIds.add(member.id);
-                    }
-                });
-                showToast("Branches Collapsed");
-            } else {
-                // Expand everything
-                collapsedParentIds.clear();
-                showToast("All Branches Expanded");
-            }
-
-            family.load(getVisibleNodes());
-            updateDockButtonState();
-            fitAndCenterTree();
-        }
-
-        function updateDockButtonState() {
-            const btnText = document.getElementById("expandAllText");
-            const btnIcon = document.getElementById("expandAllIcon");
-            if (collapsedParentIds.size > 0) {
-                btnText.innerText = "Expand All";
-                btnIcon.innerText = "⊞";
-            } else {
-                btnText.innerText = "Collapse Branches";
-                btnIcon.innerText = "⊟";
-            }
-        }
-
-        // Centers and resets camera view smoothly
-        function fitAndCenterTree() {
-            if (!family) return;
-            // Center on generation 1 root (id: 1)
-            family.center(1, {
-                valign: FamilyTree.valign.center,
-                halign: FamilyTree.halign.center
-            });
-        }
-
-        // --- 4. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
+        // --- 6. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
         let tapCount = 0;
         let tapResetTimer = null;
 
@@ -824,7 +975,7 @@
             setTimeout(openAuthModal, 500);
         }
 
-        // --- 5. AUTHENTICATION ---
+        // --- 7. AUTHENTICATION & ADMIN CONTROLS ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
             const adminControls = document.getElementById("adminControls");
@@ -838,12 +989,14 @@
                 adminControls.style.display = "none";
             }
             initFamilyTree();
+            checkPasscodeAuthorization();
         });
 
         function openAuthModal() {
             document.getElementById("authError").style.display = "none";
             document.getElementById("authEmail").value = "";
             document.getElementById("authPassword").value = "";
+            document.getElementById("adminNewPasscode").value = cloudPasscode;
             document.getElementById("authModal").style.display = "flex";
         }
 
@@ -854,6 +1007,7 @@
         function performAuth() {
             const email = document.getElementById("authEmail").value.trim();
             const password = document.getElementById("authPassword").value.trim();
+            const newCode = document.getElementById("adminNewPasscode").value.trim();
             const errDiv = document.getElementById("authError");
 
             if (!email || !password) {
@@ -865,6 +1019,11 @@
             auth.signInWithEmailAndPassword(email, password)
                 .then(() => {
                     closeAuthModal();
+                    if (newCode) {
+                        cloudPasscode = newCode;
+                        
+                        treeDocRef.set({ passcode: newCode }, { merge: true });
+                    }
                     if (window.location.hash === "#admin") {
                         history.replaceState(null, null, ' ');
                     }
@@ -881,7 +1040,7 @@
             });
         }
 
-        // --- 6. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
+        // --- 8. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
         function compressImage(file, maxWidth, maxHeight, callback) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -960,7 +1119,7 @@
             group.style.display = isDeceased ? 'block' : 'none';
         }
 
-        // --- 7. CLOUD FIRESTORE PERSISTENCE ---
+        // --- 9. CLOUD FIRESTORE PERSISTENCE ---
         function saveToStorage() {
             if (!isAdmin) return;
 
@@ -977,6 +1136,7 @@
                     treeName: "Devendran Family Lineage",
                     tenantId: TENANT_ID,
                     adminUid: currentUser ? currentUser.uid : null,
+                    passcode: cloudPasscode,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     members: familyData
                 }, { merge: true })
@@ -992,27 +1152,40 @@
             }
         }
 
-        // --- 8. REAL-TIME CLOUD LISTENER ---
+        // --- 10. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
-            if (docSnapshot.exists && docSnapshot.data().members) {
-                const cloudMembers = docSnapshot.data().members;
-                if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
-                    familyData = cloudMembers;
-                    familyData.forEach(syncNodeTags);
-                    if (family) family.load(getVisibleNodes());
-                    localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
-                    if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
-                        window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                if (data.passcode) {
+                    cloudPasscode = data.passcode;
+                } else if (isAdmin) {
+                    // Seed initial passcode if missing
+                    treeDocRef.set({ passcode: "1938" }, { merge: true });
+                }
+
+                if (data.members) {
+                    const cloudMembers = data.members;
+                    if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
+                        familyData = cloudMembers;
+                        familyData.forEach(syncNodeTags);
+                        if (family) family.load(filterTreeData(currentFilterMode));
+                        localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
+                        if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                            window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+                        }
                     }
                 }
             } else if (isAdmin) {
                 saveToStorage();
             }
+
+            checkPasscodeAuthorization();
         }, (error) => {
             console.warn("Firestore live listener offline:", error);
+            checkPasscodeAuthorization();
         });
 
-        // Search & Jump logic with auto-expansion of collapsed ancestors
+        // Search & Jump logic
         function handleSearch(query) {
             const dropdown = document.getElementById("searchDropdown");
             if (!query || query.trim().length === 0) {
@@ -1020,10 +1193,11 @@
                 return;
             }
             const q = query.toLowerCase();
-            const matches = familyData.filter(m => m.name && m.name.toLowerCase().includes(q));
+            const currentVisible = filterTreeData(currentFilterMode);
+            const matches = currentVisible.filter(m => m.name && m.name.toLowerCase().includes(q));
 
             if (matches.length === 0) {
-                dropdown.innerHTML = '<div class="search-item" style="color: #7b7b94;">No relatives found</div>';
+                dropdown.innerHTML = '<div class="search-item" style="color: #7b7b94;">No matching relatives found</div>';
                 dropdown.style.display = "block";
                 return;
             }
@@ -1041,9 +1215,8 @@
             document.getElementById("searchDropdown").style.display = "none";
             document.getElementById("searchInput").value = "";
             if (family) {
-                // Ensure all parents are uncollapsed so the searched person is visible
                 collapsedParentIds.clear();
-                family.load(getVisibleNodes());
+                family.load(filterTreeData(currentFilterMode));
                 updateDockButtonState();
 
                 setTimeout(() => {
@@ -1172,7 +1345,7 @@
             }
 
             closeAddModal();
-            family.load(getVisibleNodes());
+            family.load(filterTreeData(currentFilterMode));
             saveToStorage();
         }
 
@@ -1235,7 +1408,7 @@
             syncNodeTags(person);
 
             closeEditModal();
-            family.load(getVisibleNodes());
+            family.load(filterTreeData(currentFilterMode));
             saveToStorage();
         }
     </script>
