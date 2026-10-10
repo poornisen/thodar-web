@@ -34,7 +34,7 @@
             height: 100%;
         }
 
-        /* Print Media Styles */
+        /* Print Media Styles: hides UI controls, formats for paper */
         @media print {
             body, html {
                 background: #ffffff !important;
@@ -70,7 +70,7 @@
             stroke-dasharray: 4, 2;
         }
 
-        /* Header Bar: Family Tree Title + Actions */
+        /* Header Bar: Family Tree Title + Global Exit / Close Button */
         #topHeader {
             position: fixed;
             top: 8px;
@@ -99,22 +99,6 @@
             content: "🌿";
             font-size: 14px;
         }
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .req-tree-btn {
-            background: rgba(56, 189, 248, 0.18);
-            border: 1px solid rgba(56, 189, 248, 0.45);
-            color: #38bdf8;
-            border-radius: 8px;
-            padding: 4px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-        }
         .exit-btn {
             background: rgba(220, 53, 69, 0.22);
             border: 1px solid rgba(220, 53, 69, 0.55);
@@ -128,9 +112,14 @@
             align-items: center;
             gap: 5px;
             backdrop-filter: blur(8px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+        .exit-btn:active {
+            background: rgba(220, 53, 69, 0.45);
+            color: #ffffff;
         }
 
-        /* Sub-Header: Search, Filter, Export & Role Controls */
+        /* Sub-Header: Search, Filter, and Export Controls */
         #topBar {
             position: fixed;
             top: 40px;
@@ -138,14 +127,15 @@
             right: 12px;
             z-index: 1000;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 8px;
-            background: rgba(28, 28, 38, 0.92);
+            background: rgba(28, 28, 38, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid #323247;
             border-radius: 12px;
-            padding: 6px 10px;
+            padding: 8px 10px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
         #secretLogo {
@@ -192,14 +182,17 @@
             display: none;
             align-items: center;
             gap: 6px;
+            width: 100%;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
         .admin-badge {
             font-size: 11px;
             padding: 4px 7px;
             border-radius: 8px;
-            background: rgba(56, 189, 248, 0.2);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.4);
+            background: rgba(0, 123, 255, 0.2);
+            color: #4da3ff;
+            border: 1px solid rgba(0, 123, 255, 0.4);
             white-space: nowrap;
         }
         .admin-btn {
@@ -270,7 +263,7 @@
             opacity: 1;
         }
 
-        /* Floating Collapse/Expand Button */
+        /* Floating Collapse/Expand Button (Bottom Right) */
         #collapseDock {
             position: fixed;
             right: 14px;
@@ -292,6 +285,10 @@
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
         }
+        .collapse-btn:active {
+            background: #007bff;
+            color: #ffffff;
+        }
 
         /* Modals */
         .modal-overlay {
@@ -302,7 +299,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.85);
-            z-index: 9999;
+            z-index: 100000;
             align-items: center;
             justify-content: center;
             padding: 16px;
@@ -312,7 +309,7 @@
             border: 1px solid #37374d;
             border-radius: 14px;
             width: 100%;
-            max-width: 420px;
+            max-width: 380px;
             max-height: 90vh;
             overflow-y: auto;
             padding: 22px;
@@ -417,18 +414,20 @@
 </head>
 <body>
 
-    <!-- Header: Family Tree Title + Request New Tree + Exit Button -->
+    <!-- Header: Family Tree Title + Actions -->
     <div id="topHeader">
         <div id="treeTitleHeader">Devendran Family Lineage</div>
-        <div class="header-actions">
-            <button class="req-tree-btn" onclick="openRequestTreeModal()">➕ Request Tree</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="admin-btn" style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;" onclick="openUnlockDialog()" title="Switch Tree">
+                🔄 Switch Tree
+            </button>
             <button class="exit-btn" onclick="handleExitSession()" title="Exit & Lock Tree">
                 <span>⏻</span> Exit
             </button>
         </div>
     </div>
 
-    <!-- Sub-Bar: Search, Perspective Filter, Export & Role Controls -->
+    <!-- Sub-Bar: Search, Perspective Filter, Export & Admin Controls -->
     <div id="topBar">
         <div id="secretLogo" onclick="handleSecretTap()" title="">
             <svg viewBox="0 0 24 24">
@@ -447,9 +446,9 @@
         <button class="admin-btn" style="background: #232332; border-color: #43435c;" onclick="openExportModal()" title="Export or Print">🖨️ Export</button>
         
         <div id="adminControls">
-            <span id="roleBadge" class="admin-badge">Owner</span>
-            <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcodes">🔑 Passcodes</button>
-            <button class="admin-btn" onclick="handleExitSession()">Lock</button>
+            <span class="admin-badge">Admin</span>
+            <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
+            <button class="admin-btn" onclick="signOutAdmin()">Sign Out</button>
         </div>
     </div>
     <div id="searchDropdown"></div>
@@ -464,34 +463,45 @@
         </button>
     </div>
 
-    <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
-    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; color:#f8fafc; z-index:99999; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
-        <div style="max-width:460px; background:#1e293b; padding:32px; border-radius:14px; border:1px solid #334155; box-shadow:0 12px 36px rgba(0,0,0,0.65);">
+        <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
+    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; color:#f8fafc; z-index:99990; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
+        <div style="max-width:440px; background:#1e293b; padding:32px; border-radius:14px; border:1px solid #334155; box-shadow:0 12px 36px rgba(0,0,0,0.65);">
             <div id="gatekeeperIcon" style="font-size:46px; margin-bottom:14px;">⏳</div>
             <h2 id="gatekeeperTitle" style="margin:0 0 10px; font-size:20px; color:#ffffff;">Under Review</h2>
-            <p id="gatekeeperMessage" style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 22px;"></p>
-            <div style="display:flex; gap:10px; justify-content:center;">
-                <a href="?tree=thodar_devendran_01" style="display:inline-block; padding:9px 18px; background:#334155; color:#f8fafc; text-decoration:none; font-weight:600; border-radius:8px; font-size:13px;">View Demo Tree</a>
-                <button class="btn btn-save" onclick="openRequestTreeModal()" style="font-size:13px; padding:9px 18px;">Request a Tree</button>
+            <p id="gatekeeperMessage" style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 22px;">
+                This lineage chart is currently pending administrator activation.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px; justify-content:center;">
+                <button class="btn btn-save" style="padding:10px 18px; font-size:13px;" onclick="document.getElementById('gatekeeperOverlay').style.display='none'; openUnlockDialog();">
+                    🔑 Enter Tree Code & PIN
+                </button>
+                <button class="btn btn-cancel" style="padding:8px 18px; font-size:12px;" onclick="document.getElementById('gatekeeperOverlay').style.display='none'; openRequestTreeModal();">
+                    ➕ Request a New Tree
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- 1. Passcode Unlock Gatekeeper (Owner or Viewer) -->
+    <!-- 1. Passcode & Tree Code Unlock Gatekeeper -->
     <div id="passcodeModal" class="modal-overlay" style="display: none;">
         <div class="modal-box" style="text-align: center;">
             <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
-            <h3 style="margin-bottom: 6px;">Private Family Tree</h3>
+            <h3 style="margin-bottom: 6px;">Unlock Family Lineage</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: 0; margin-bottom: 18px;">
-                Enter the Owner Passcode to edit, or Viewer Passcode to view this lineage.
+                Enter your 6-Digit Tree Code and PIN to access this family chart.
             </p>
             <div class="form-group" style="text-align: left;">
-                <label>Access Passcode</label>
-                <input type="password" id="inputPasscode" placeholder="Enter passcode" onkeydown="if(event.key==='Enter') verifyPasscode()" />
+                <label>6-Digit Tree Code</label>
+                <input type="text" id="inputTreeId" placeholder="e.g. 748209" style="font-size: 16px; letter-spacing: 1px;" />
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Access PIN (Owner or Viewer)</label>
+                <input type="password" id="inputPasscode" placeholder="4-digit PIN" onkeydown="if(event.key==='Enter') verifyPasscode()" />
             </div>
             <div id="passcodeError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
-            <div class="modal-actions" style="justify-content: center;">
+            <div class="modal-actions" style="flex-direction: column; gap: 8px;">
                 <button class="btn btn-save" style="width: 100%;" onclick="verifyPasscode()">Unlock Tree</button>
+                <button class="btn btn-cancel" style="width: 100%; font-size: 12px;" onclick="openRequestTreeModal()">➕ Request a New Family Tree</button>
             </div>
         </div>
     </div>
@@ -518,57 +528,56 @@
         </div>
     </div>
 
-    <!-- 3. Dedicated Passcode Manager Modal (Owner & Admin) -->
+    <!-- 3. Dedicated Tree Code & PIN Manager Modal (Owner & Admin) -->
     <div id="managePasscodeModal" class="modal-overlay">
         <div class="modal-box">
-            <h3>Manage Family Passcodes</h3>
+            <h3>Manage Tree Code & PINs</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
-                Control access for editing the tree and sharing it with family viewers.
+                Share the Tree Code and Viewer PIN with family members to let them view your chart safely.
             </p>
             <div class="form-group">
-                <label>Owner Passcode (Full Edit Permissions)</label>
-                <input type="text" id="manageOwnerPasscodeField" />
+                <label>Your 6-Digit Tree Code</label>
+                <input type="text" id="manageTreeCodeDisplay" readonly style="background:#13131c; color:#38bdf8; font-weight:700; letter-spacing:1px;" />
             </div>
-            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 14px;">
-                <label style="color: #38bdf8;">Viewer Passcode (Read-Only for Relatives)</label>
+            <div class="form-group">
+                <label>Owner PIN (Full Edit Access)</label>
+                <input type="text" id="manageOwnerPasscodeField" placeholder="e.g. 9999" />
+            </div>
+            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 12px;">
+                <label style="color: #38bdf8;">Viewer PIN (Read-Only for Family)</label>
                 <input type="text" id="manageViewerPasscodeField" placeholder="e.g. 1234" />
-                <span style="font-size: 11px; color: #7b7b94; display:block; margin-top:4px;">Share this code with your family members so they can view the tree safely.</span>
+                <span style="font-size: 11px; color: #7b7b94; display:block; margin-top:4px;">Relatives with this PIN cannot edit or delete relatives.</span>
             </div>
             <div style="margin-top: 14px;">
                 <button type="button" class="btn btn-cancel" style="width:100%; font-size:12px;" onclick="copyFamilyShareDetails()">
-                    📋 Copy Share Link & Viewer Code
+                    📋 Copy Share Link & Viewer PIN
                 </button>
             </div>
-            <div class="modal-actions" style="margin-top: 20px;">
+            <div class="modal-actions" style="margin-top: 18px;">
                 <button class="btn btn-cancel" onclick="closePasscodeManager()">Cancel</button>
-                <button class="btn btn-save" onclick="saveNewPasscodes()">Save Passcodes</button>
+                <button class="btn btn-save" onclick="saveNewPasscodes()">Save PINs</button>
             </div>
         </div>
     </div>
 
-    <!-- 4. Request New Family Tree Modal (Client Self-Service) -->
+    <!-- Request New Family Tree Modal -->
     <div id="requestTreeModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 style="color:#38bdf8;">Request Your Family Tree</h3>
+            <h3 style="color:#38bdf8;">Request New Family Tree</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
-                Submit your lineage details. Once verified and approved by the admin, your access will be activated.
+                A unique 6-digit Tree Code will be assigned to your family. You will be able to build your tree once approved.
             </p>
             <div class="form-group">
                 <label>Family / Lineage Name *</label>
                 <input type="text" id="reqTreeName" placeholder="e.g. Sharma Family Lineage" />
             </div>
             <div class="form-group">
-                <label>Desired Tree ID (URL Slug) *</label>
-                <input type="text" id="reqTreeSlug" placeholder="e.g. sharma_family" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_-]/g, '')" />
-                <span style="font-size: 11px; color: #7b7b94;">Only letters, numbers, and dashes.</span>
-            </div>
-            <div class="form-group">
                 <label>Owner Email *</label>
                 <input type="email" id="reqOwnerEmail" placeholder="yourname@gmail.com" />
             </div>
             <div class="form-group">
-                <label>Your Secret Owner Passcode *</label>
-                <input type="password" id="reqPasscode" placeholder="4 to 8 characters (e.g. 5566)" />
+                <label>Set Your Owner PIN *</label>
+                <input type="password" id="reqPasscode" placeholder="4 to 6 digit secret PIN" />
             </div>
             <div id="reqError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
             <div class="modal-actions">
@@ -578,10 +587,10 @@
         </div>
     </div>
 
-    <!-- 5. Admin Authentication Modal (Stealth 7-Tap for Super-Admin) -->
+    <!-- 4. Admin Authentication Modal (Stealth 7-Tap) -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 id="authTitle">Super-Admin Authentication</h3>
+            <h3 id="authTitle">Admin Authentication</h3>
             <div class="form-group">
                 <label>Admin Email</label>
                 <input type="email" id="authEmail" placeholder="admin@example.com" />
@@ -589,6 +598,10 @@
             <div class="form-group">
                 <label>Password</label>
                 <input type="password" id="authPassword" placeholder="••••••••" />
+            </div>
+            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 12px;">
+                <label style="color: #4da3ff;">Set / Update Family Passcode</label>
+                <input type="text" id="adminNewPasscode" placeholder="e.g. 1938" />
             </div>
             <div id="authError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
             <div class="modal-actions" style="justify-content: space-between;">
@@ -746,15 +759,16 @@
         const db = firebase.firestore();
         const storage = firebase.storage();
 
-        // Extract tenant ID from URL parameter '?tree=...'
+        // 6-Digit Tree Code initialization (URL parameter first, then localStorage memory, fallback to demo)
         const urlParams = new URLSearchParams(window.location.search);
-        const TENANT_ID = urlParams.get("tree") || "thodar_devendran_01";
-        const treeDocRef = db.collection("trees").doc(TENANT_ID);
+        let TENANT_ID = urlParams.get("tree") || localStorage.getItem("thodar_active_tree") || "thodar_devendran_01";
+        let treeDocRef = db.collection("trees").doc(TENANT_ID);
+        let treeUnsubscribe = null;
 
         let currentUser = null;
-        let isAdmin = false;           // Super-admin signed in via Firebase Auth
-        let isOwnerSession = false;    // Tree owner signed in via Owner Passcode
-        let isPasscodeUnlocked = false;// Either Owner or Viewer has entered valid credentials
+        let isAdmin = false;           // Super-Admin logged in via stealth 7-tap
+        let isOwnerSession = false;    // Tree Owner unlocked via Owner PIN
+        let isPasscodeUnlocked = false;// Unlocked as either Owner or Viewer
         let selectedNodeId = null;
         let currentFilterMode = "all";
 
@@ -762,6 +776,10 @@
         let cloudViewerPasscode = "";
 
         const collapsedParentIds = new Set();
+
+        function canEdit() {
+            return isAdmin || isOwnerSession;
+        }
 
         const defaultSeedData = [
             { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", deathYear: "", isDeceased: false, tags: [], place: "Salem", notes: "*" },
@@ -778,10 +796,6 @@
             { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female", birthYear: "2001", isDeceased: false, tags: [], place: "Salem" }
         ];
 
-        function canEdit() {
-            return isAdmin || isOwnerSession;
-        }
-
         function showToast(msg) {
             const toast = document.getElementById("toast");
             toast.innerText = msg;
@@ -794,12 +808,15 @@
         function loadLocalData() {
             try {
                 const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
-                if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
+                
+                // Only allow AndroidBridge cache for the primary default seed tree
+                if (TENANT_ID === "thodar_devendran_01" && window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
                     const androidData = window.AndroidBridge.loadFamilyData();
                     if (androidData && androidData.trim().length > 5) {
                         return JSON.parse(androidData);
                     }
                 }
+                
                 const webData = localStorage.getItem(storageKey);
                 if (webData && webData.trim().length > 5) {
                     return JSON.parse(webData);
@@ -807,6 +824,7 @@
             } catch (err) {
                 console.error("Local data load error:", err);
             }
+            
             if (TENANT_ID === "thodar_devendran_01") {
                 return JSON.parse(JSON.stringify(defaultSeedData));
             }
@@ -825,59 +843,142 @@
         }
         familyData.forEach(syncNodeTags);
 
-        // --- 2. MULTI-TIER PASSCODE & ROLE MANAGEMENT ---
+        // --- 2. MULTI-TIER 6-DIGIT TREE CODE & PIN GATEKEEPER ---
         function updateControlBar() {
             const adminControls = document.getElementById("adminControls");
-            const roleBadge = document.getElementById("roleBadge");
+            const badge = adminControls ? adminControls.querySelector(".admin-badge") : null;
 
             if (canEdit()) {
-                adminControls.style.display = "flex";
-                roleBadge.innerText = isAdmin ? "Super-Admin" : "Tree Owner";
+                if (adminControls) adminControls.style.display = "flex";
+                if (badge) badge.innerText = isAdmin ? "Super-Admin" : "Tree Owner";
             } else {
-                adminControls.style.display = "none";
+                if (adminControls) adminControls.style.display = "none";
             }
         }
 
         function checkPasscodeAuthorization() {
+            // Check if session was already authenticated prior to screen rotation / reload
+            const sessionRole = sessionStorage.getItem("thodar_session_" + TENANT_ID);
+            if (sessionRole) {
+                isPasscodeUnlocked = true;
+                isOwnerSession = (sessionRole === "owner");
+            }
+
             if (isAdmin || isPasscodeUnlocked) {
                 document.getElementById("passcodeModal").style.display = "none";
+                updateControlBar();
                 return true;
             } else {
-                document.getElementById("passcodeModal").style.display = "flex";
+                const container = document.getElementById("tree");
+                if (container) container.innerHTML = "";
+                openUnlockDialog();
                 return false;
             }
         }
 
+        function openUnlockDialog() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+
+            const modal = document.getElementById("passcodeModal");
+            document.getElementById("inputTreeId").value = (TENANT_ID === "test1" || TENANT_ID === "thodar_devendran_01") ? "" : TENANT_ID;
+            document.getElementById("inputPasscode").value = "";
+            document.getElementById("passcodeError").style.display = "none";
+            modal.style.display = "flex";
+        }
+
         function verifyPasscode() {
+            const enteredTreeId = document.getElementById("inputTreeId").value.trim();
             const inputVal = document.getElementById("inputPasscode").value.trim();
             const errDiv = document.getElementById("passcodeError");
 
-            if (inputVal === cloudOwnerPasscode) {
-                isPasscodeUnlocked = true;
-                isOwnerSession = true;
-                document.getElementById("passcodeModal").style.display = "none";
-                document.getElementById("inputPasscode").value = "";
-                errDiv.style.display = "none";
-                showToast("Unlocked as Tree Owner (Editor)");
-                updateControlBar();
-                initFamilyTree();
-            } else if (cloudViewerPasscode && inputVal === cloudViewerPasscode) {
-                isPasscodeUnlocked = true;
-                isOwnerSession = false;
-                document.getElementById("passcodeModal").style.display = "none";
-                document.getElementById("inputPasscode").value = "";
-                errDiv.style.display = "none";
-                showToast("Unlocked as Family Viewer (Read-Only)");
-                updateControlBar();
-                initFamilyTree();
-            } else {
-                errDiv.innerText = "Incorrect passcode. Please check with your lineage owner.";
+            if (!enteredTreeId || !inputVal) {
+                errDiv.innerText = "Please enter both Tree Code and PIN.";
                 errDiv.style.display = "block";
+                return;
             }
+
+            // Direct Point-in-Time Key Lookup: exactly 1 Firestore document read!
+            db.collection("trees").doc(enteredTreeId).get().then(doc => {
+                if (!doc.exists) {
+                    errDiv.innerText = `Tree '${enteredTreeId}' does not exist.`;
+                    errDiv.style.display = "block";
+                    return;
+                }
+
+                const data = doc.data();
+
+                if (data.isApproved === false && !isAdmin) {
+                    errDiv.innerText = `Tree '${enteredTreeId}' is currently pending administrator approval.`;
+                    errDiv.style.display = "block";
+                    return;
+                }
+
+                const ownerCode = String(data.passcode || "");
+                const viewerCode = String(data.viewerPasscode || "");
+
+                if (inputVal === ownerCode) {
+                    // Authenticated as Tree Owner (Editor)
+                    switchActiveTree(enteredTreeId, true, data);
+                    showToast("Unlocked as Tree Owner (Editor)");
+                } else if (viewerCode && inputVal === viewerCode) {
+                    // Authenticated as Family Viewer (Read-Only)
+                    switchActiveTree(enteredTreeId, false, data);
+                    showToast("Unlocked as Family Viewer");
+                } else {
+                    errDiv.innerText = "Incorrect PIN for this Tree Code.";
+                    errDiv.style.display = "block";
+                }
+            }).catch(err => {
+                errDiv.innerText = "Error: " + err.message;
+                errDiv.style.display = "block";
+            });
+        }
+
+        function switchActiveTree(newTreeId, asOwner, docData) {
+            TENANT_ID = newTreeId;
+            localStorage.setItem("thodar_active_tree", newTreeId);
+            isPasscodeUnlocked = true;
+            isOwnerSession = asOwner;
+
+            // Retain active unlock status across screen rotations
+            sessionStorage.setItem("thodar_session_" + newTreeId, asOwner ? "owner" : "viewer");
+
+            document.getElementById("passcodeModal").style.display = "none";
+            updateControlBar();
+
+            // Reset branch collapse states
+            collapsedParentIds.clear();
+
+            if (docData) {
+                if (docData.treeName) {
+                    document.getElementById("treeTitleHeader").innerText = docData.treeName;
+                }
+                if (docData.passcode) {
+                    cloudOwnerPasscode = String(docData.passcode);
+                }
+                if (docData.viewerPasscode !== undefined) {
+                    cloudViewerPasscode = String(docData.viewerPasscode);
+                }
+                // Load the new tree members directly from Firestore payload
+                familyData = Array.isArray(docData.members) ? docData.members : [];
+                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
+                localStorage.setItem(storageKey, JSON.stringify(familyData));
+            } else {
+                familyData = loadLocalData();
+            }
+
+            familyData.forEach(syncNodeTags);
+            initFamilyTree();
+
+            // Rebind the live listener to the new tree document
+            treeDocRef = db.collection("trees").doc(TENANT_ID);
+            setupRealtimeListener();
         }
 
         function openPasscodeManager() {
             if (!canEdit()) return;
+            document.getElementById("manageTreeCodeDisplay").value = TENANT_ID;
             document.getElementById("manageOwnerPasscodeField").value = cloudOwnerPasscode;
             document.getElementById("manageViewerPasscodeField").value = cloudViewerPasscode;
             document.getElementById("managePasscodeModal").style.display = "flex";
@@ -893,7 +994,12 @@
             const newViewer = document.getElementById("manageViewerPasscodeField").value.trim();
 
             if (!newOwner) {
-                alert("Owner Passcode cannot be empty.");
+                alert("Owner PIN cannot be empty.");
+                return;
+            }
+
+            if (newViewer && newOwner === newViewer) {
+                alert("Owner PIN and Viewer PIN cannot be identical. Please pick distinct PINs to keep editing and viewing access separate.");
                 return;
             }
 
@@ -906,26 +1012,26 @@
             }, { merge: true })
             .then(() => {
                 closePasscodeManager();
-                showToast("Passcodes Updated Successfully");
+                showToast("PINs Updated Successfully");
             })
-            .catch(err => alert("Error saving passcodes: " + err.message));
+            .catch(err => alert("Error saving PINs: " + err.message));
         }
 
         function copyFamilyShareDetails() {
             const viewerCode = document.getElementById("manageViewerPasscodeField").value.trim() || cloudViewerPasscode;
             const shareUrl = `${window.location.origin}${window.location.pathname}?tree=${TENANT_ID}`;
-            const message = `🌿 View our family tree on Thodar:\nLink: ${shareUrl}\nViewer Passcode: ${viewerCode || "(Not set yet)"}`;
+            const msg = `🌿 View our family tree on Thodar:\nLink: ${shareUrl}\nTree Code: ${TENANT_ID}\nViewer PIN: ${viewerCode || "(None set yet)"}`;
 
-            navigator.clipboard.writeText(message)
+            navigator.clipboard.writeText(msg)
                 .then(() => showToast("Share Link & Code Copied!"))
-                .catch(() => alert(message));
+                .catch(() => alert(msg));
         }
 
-        // --- 3. REQUEST A NEW TREE MODAL ---
+        // --- REQUEST A NEW TREE MODAL ---
         function openRequestTreeModal() {
+            document.getElementById("passcodeModal").style.display = "none";
             document.getElementById("reqError").style.display = "none";
             document.getElementById("reqTreeName").value = "";
-            document.getElementById("reqTreeSlug").value = "";
             document.getElementById("reqOwnerEmail").value = "";
             document.getElementById("reqPasscode").value = "";
             document.getElementById("requestTreeModal").style.display = "flex";
@@ -935,35 +1041,37 @@
             document.getElementById("requestTreeModal").style.display = "none";
         }
 
-        function submitTreeRequest() {
+        async function generateUnique6DigitCode() {
+            for (let attempts = 0; attempts < 10; attempts++) {
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                const checkDoc = await db.collection("trees").doc(code).get();
+                if (!checkDoc.exists) {
+                    return code;
+                }
+            }
+            return Date.now().toString().slice(-6);
+        }
+
+        async function submitTreeRequest() {
             const treeName = document.getElementById("reqTreeName").value.trim();
-            const treeSlug = document.getElementById("reqTreeSlug").value.trim();
             const ownerEmail = document.getElementById("reqOwnerEmail").value.trim();
             const passcode = document.getElementById("reqPasscode").value.trim();
             const errDiv = document.getElementById("reqError");
             const btn = document.getElementById("reqSubmitBtn");
 
-            if (!treeName || !treeSlug || !ownerEmail || !passcode) {
+            if (!treeName || !ownerEmail || !passcode) {
                 errDiv.innerText = "All fields are required.";
                 errDiv.style.display = "block";
                 return;
             }
 
             btn.disabled = true;
-            btn.innerText = "Submitting...";
+            btn.innerText = "Allocating 6-Digit Code...";
 
-            const targetDoc = db.collection("trees").doc(treeSlug);
-            targetDoc.get().then(doc => {
-                if (doc.exists) {
-                    btn.disabled = false;
-                    btn.innerText = "Submit Request";
-                    errDiv.innerText = "This Tree ID is already in use. Please choose another.";
-                    errDiv.style.display = "block";
-                    return;
-                }
-
-                return targetDoc.set({
-                    tenantId: treeSlug,
+            try {
+                const assignedCode = await generateUnique6DigitCode();
+                await db.collection("trees").doc(assignedCode).set({
+                    tenantId: assignedCode,
                     treeName: treeName,
                     ownerEmail: ownerEmail,
                     passcode: passcode,
@@ -971,29 +1079,31 @@
                     isApproved: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     members: []
-                }).then(() => {
-                    closeRequestTreeModal();
-                    alert(`Tree Request Submitted! 🎉\n\nYour tree '${treeName}' has been submitted for administrator approval. Access will be unlocked once approved.`);
-                    window.location.search = `?tree=${treeSlug}`;
                 });
-            }).catch(err => {
+
+                closeRequestTreeModal();
+                alert(`Tree Requested Successfully! 🎉\n\nYour Assigned 6-Digit Tree Code is: ${assignedCode}\nLineage Name: ${treeName}\n\nYour registration has been submitted for administrator activation. Keep this 6-Digit code safe!`);
+                window.location.search = `?tree=${assignedCode}`;
+            } catch (err) {
                 btn.disabled = false;
                 btn.innerText = "Submit Request";
-                errDiv.innerText = "Submission error: " + err.message;
+                errDiv.innerText = "Error: " + err.message;
                 errDiv.style.display = "block";
-            });
+            }
         }
 
-        // --- 4. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
+        // --- 3. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
         function handleExitSession() {
             isPasscodeUnlocked = false;
             isOwnerSession = false;
+            // Clear screen-rotation session on deliberate lock/exit
+            sessionStorage.removeItem("thodar_session_" + TENANT_ID);
+
             if (isAdmin) {
                 auth.signOut().catch(() => {});
             }
             updateControlBar();
-            document.getElementById("passcodeModal").style.display = "flex";
-            document.getElementById("inputPasscode").value = "";
+            openUnlockDialog();
             showToast("Session Locked");
 
             if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
@@ -1001,7 +1111,7 @@
             }
         }
 
-        // --- 5. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
+        // --- 4. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
         function getChildrenCount(personId) {
             const person = familyData.find(m => m.id == personId);
             if (!person) return 0;
@@ -1103,6 +1213,7 @@
             }
         }
 
+        // --- 5. COLLAPSE / EXPAND CONTROLS ---
         function toggleSingleBranch(parentId) {
             const count = getChildrenCount(parentId);
             if (count === 0) return;
@@ -1256,6 +1367,11 @@
 
             family = new FamilyTree(container, treeConfig);
 
+            // Layout settle fix for Android WebView
+            setTimeout(() => {
+                if (family) family.fit();
+            }, 150);
+
             if (canEdit()) {
                 family.onRemoveNode(function(args) {
                     const removeId = args.id;
@@ -1286,7 +1402,7 @@
                 if (!isAdmin) {
                     openAuthModal();
                 } else {
-                    showToast("Already in Super-Admin Mode");
+                    showToast("Already in Admin Mode");
                 }
             }
         }
@@ -1295,16 +1411,19 @@
             setTimeout(openAuthModal, 500);
         }
 
-        // --- 8. SUPER-ADMIN AUTHENTICATION ---
+        // --- 8. AUTHENTICATION & ADMIN CONTROLS ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
+            const adminControls = document.getElementById("adminControls");
+
             if (user) {
                 isAdmin = true;
-                showToast("Super-Admin Mode Activated");
+                adminControls.style.display = "flex";
+                showToast("Admin Mode Activated");
             } else {
                 isAdmin = false;
+                adminControls.style.display = "none";
             }
-            updateControlBar();
             initFamilyTree();
             checkPasscodeAuthorization();
         });
@@ -1313,6 +1432,7 @@
             document.getElementById("authError").style.display = "none";
             document.getElementById("authEmail").value = "";
             document.getElementById("authPassword").value = "";
+            document.getElementById("adminNewPasscode").value = cloudPasscode;
             document.getElementById("authModal").style.display = "flex";
         }
 
@@ -1323,6 +1443,7 @@
         function performAuth() {
             const email = document.getElementById("authEmail").value.trim();
             const password = document.getElementById("authPassword").value.trim();
+            const newCode = document.getElementById("adminNewPasscode").value.trim();
             const errDiv = document.getElementById("authError");
 
             if (!email || !password) {
@@ -1334,6 +1455,10 @@
             auth.signInWithEmailAndPassword(email, password)
                 .then(() => {
                     closeAuthModal();
+                    if (newCode) {
+                        cloudPasscode = newCode;
+                        treeDocRef.set({ passcode: newCode }, { merge: true });
+                    }
                     if (window.location.hash === "#admin") {
                         history.replaceState(null, null, ' ');
                     }
@@ -1342,6 +1467,12 @@
                     errDiv.innerText = err.message;
                     errDiv.style.display = "block";
                 });
+        }
+
+        function signOutAdmin() {
+            auth.signOut().then(() => {
+                showToast("Returned to Viewer Mode");
+            });
         }
 
         // --- 9. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
@@ -1483,53 +1614,82 @@
         }
 
         // --- 11. REAL-TIME CLOUD LISTENER ---
-        treeDocRef.onSnapshot((docSnapshot) => {
-            if (docSnapshot.exists) {
-                const data = docSnapshot.data();
+        function showPendingScreen(treeName) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⏳";
+            document.getElementById("gatekeeperTitle").innerText = "Tree Awaiting Approval";
+            document.getElementById("gatekeeperMessage").innerHTML = 
+                `<strong>${treeName}</strong> is currently pending administrator activation. Access will unlock once approved.`;
+        }
 
-                // Approval Gate Check: If not approved and not super-admin, lock view
-                if (data.isApproved === false && !isAdmin) {
-                    showPendingScreen(data.treeName || TENANT_ID);
-                    return;
-                }
+        function showErrorScreen(title, message) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⚠️";
+            document.getElementById("gatekeeperTitle").innerText = title;
+            document.getElementById("gatekeeperMessage").innerText = message;
+        }
 
-                hideOverlayScreen();
+        function hideOverlayScreen() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+        }
 
-                if (data.treeName) {
-                    document.getElementById("treeTitleHeader").innerText = data.treeName;
-                }
-                if (data.passcode) {
-                    cloudOwnerPasscode = data.passcode;
-                }
-                if (data.viewerPasscode !== undefined) {
-                    cloudViewerPasscode = data.viewerPasscode;
-                }
+        function setupRealtimeListener() {
+            if (treeUnsubscribe) treeUnsubscribe();
 
-                const cloudMembers = Array.isArray(data.members) ? data.members : [];
-                if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
-                    familyData = cloudMembers;
-                    familyData.forEach(syncNodeTags);
-                    initFamilyTree();
-                    const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
-                    localStorage.setItem(storageKey, JSON.stringify(familyData));
-                    if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
-                        window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+            treeUnsubscribe = treeDocRef.onSnapshot((docSnapshot) => {
+                if (docSnapshot.exists) {
+                    const data = docSnapshot.data();
+
+                    if (data.isApproved === false && !isAdmin) {
+                        showPendingScreen(data.treeName || TENANT_ID);
+                        return;
+                    }
+
+                    hideOverlayScreen();
+
+                    if (data.treeName) {
+                        document.getElementById("treeTitleHeader").innerText = data.treeName;
+                    }
+                    if (data.passcode) {
+                        cloudOwnerPasscode = data.passcode;
+                    }
+                    if (data.viewerPasscode !== undefined) {
+                        cloudViewerPasscode = data.viewerPasscode;
+                    }
+
+                    const cloudMembers = Array.isArray(data.members) ? data.members : [];
+                    if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
+                        familyData = cloudMembers;
+                        familyData.forEach(syncNodeTags);
+                        initFamilyTree();
+                        const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
+                        localStorage.setItem(storageKey, JSON.stringify(familyData));
+                        if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                            window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+                        }
+                    }
+                } else {
+                    if (isAdmin) {
+                        saveToStorage();
+                    } else {
+                        showErrorScreen("Tree Not Found", `The family tree '${TENANT_ID}' does not exist.`);
+                        return;
                     }
                 }
-            } else {
-                if (isAdmin) {
-                    saveToStorage();
-                } else {
-                    showErrorScreen("Tree Not Found", `The family tree '${TENANT_ID}' does not exist.`);
-                    return;
-                }
-            }
 
-            checkPasscodeAuthorization();
-        }, (error) => {
-            console.warn("Firestore live listener offline:", error);
-            checkPasscodeAuthorization();
-        });
+                checkPasscodeAuthorization();
+            }, (error) => {
+                console.warn("Firestore live listener offline:", error);
+                checkPasscodeAuthorization();
+            });
+        }
+
+        setupRealtimeListener();
 
         // Search & Jump logic
         function handleSearch(query) {
@@ -1832,6 +1992,12 @@
                 alert("Vector export error: " + err.message);
             }
         }
+
+        // Trigger unlock dialog immediately on startup / cold launch
+        window.addEventListener("DOMContentLoaded", () => {
+            checkPasscodeAuthorization();
+        });
+        checkPasscodeAuthorization();
     </script>
 </body>
 </html>
