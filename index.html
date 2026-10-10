@@ -28,10 +28,27 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-user-select: none;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+        #appHeader {
+            flex-shrink: 0;
+            background: rgba(22, 22, 31, 0.98);
+            border-bottom: 1px solid #2d2d3f;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 1000;
+            position: relative;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
         }
         #tree {
+            flex: 1;
             width: 100%;
             height: 100%;
+            position: relative;
+            overflow: hidden;
         }
 
         /* Print Media Styles: hides UI controls, formats for paper */
@@ -42,8 +59,9 @@
                 overflow: visible !important;
                 width: auto !important;
                 height: auto !important;
+                display: block !important;
             }
-            #topHeader, #topBar, #collapseDock, #toast, .modal-overlay, #searchDropdown {
+            #appHeader, #topHeader, #topBar, #collapseDock, #toast, .modal-overlay, #searchDropdown {
                 display: none !important;
             }
             #tree {
@@ -70,17 +88,13 @@
             stroke-dasharray: 4, 2;
         }
 
-        /* Header Bar: Family Tree Title + Global Exit / Close Button */
+        /* Header Row 1: Title + Switch & Exit Buttons */
         #topHeader {
-            position: fixed;
-            top: 8px;
-            left: 12px;
-            right: 12px;
-            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 2px 4px;
+            width: 100%;
+            padding: 0 2px;
         }
         #treeTitleHeader {
             color: #ffffff;
@@ -111,7 +125,6 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            backdrop-filter: blur(8px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         }
         .exit-btn:active {
@@ -119,24 +132,17 @@
             color: #ffffff;
         }
 
-        /* Sub-Header: Search, Filter, and Export Controls */
+        /* Header Row 2: Search, Perspective Filter, and Export Controls */
         #topBar {
-            position: fixed;
-            top: 40px;
-            left: 12px;
-            right: 12px;
-            z-index: 1000;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px;
-            background: rgba(28, 28, 38, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: #1c1c28;
             border: 1px solid #323247;
-            border-radius: 12px;
-            padding: 8px 10px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 4px 8px;
+            width: 100%;
         }
         #secretLogo {
             cursor: pointer;
@@ -209,8 +215,8 @@
 
         #searchDropdown {
             display: none;
-            position: fixed;
-            top: 92px;
+            position: absolute;
+            top: 100%;
             left: 12px;
             right: 12px;
             background: #212130;
@@ -414,46 +420,52 @@
 </head>
 <body>
 
-    <!-- Header: Family Tree Title + Actions -->
-    <div id="topHeader">
-        <div id="treeTitleHeader">Devendran Family Lineage</div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="admin-btn" style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;" onclick="openUnlockDialog()" title="Switch Tree">
-                🔄 Switch Tree
-            </button>
-            <button class="exit-btn" onclick="handleExitSession()" title="Exit & Lock Tree">
-                <span>⏻</span> Exit
-            </button>
+    <!-- App Header: Dynamic, non-overlapping navbar -->
+    <header id="appHeader">
+        <!-- Row 1: Lineage Title + Action Buttons -->
+        <div id="topHeader">
+            <div id="treeTitleHeader">Devendran Family Lineage</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="admin-btn" style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;" onclick="openUnlockDialog()" title="Switch Tree">
+                    🔄 Switch Tree
+                </button>
+                <button class="exit-btn" onclick="handleExitSession()" title="Exit & Lock Tree">
+                    <span>⏻</span> Exit
+                </button>
+            </div>
         </div>
-    </div>
 
-    <!-- Sub-Bar: Search, Perspective Filter, Export & Admin Controls -->
-    <div id="topBar">
-        <div id="secretLogo" onclick="handleSecretTap()" title="">
-            <svg viewBox="0 0 24 24">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-            </svg>
+        <!-- Row 2: Search, Perspective Views & Export -->
+        <div id="topBar">
+            <div id="secretLogo" onclick="handleSecretTap()" title="">
+                <svg viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+            </div>
+            <input type="text" id="searchInput" placeholder="Search relative..." oninput="handleSearch(this.value)" />
+
+            <select id="viewFilterSelect" onchange="changeLineageView(this.value)">
+                <option value="all">Full Family Tree</option>
+                <option value="blood_only">Blood Lineage (No In-Laws)</option>
+                <option value="males_with_wives">Paternal Line (With Wives)</option>
+                <option value="males_only">Direct Paternal (Males Only)</option>
+            </select>
+
+            <button class="admin-btn" style="background: #232332; border-color: #43435c;" onclick="openExportModal()" title="Export or Print">🖨️ Export</button>
         </div>
-        <input type="text" id="searchInput" placeholder="Search relative..." oninput="handleSearch(this.value)" />
 
-        <select id="viewFilterSelect" onchange="changeLineageView(this.value)">
-            <option value="all">Full Family Tree</option>
-            <option value="blood_only">Blood Lineage (No In-Laws)</option>
-            <option value="males_with_wives">Paternal Line (With Wives)</option>
-            <option value="males_only">Direct Paternal (Males Only)</option>
-        </select>
-
-        <button class="admin-btn" style="background: #232332; border-color: #43435c;" onclick="openExportModal()" title="Export or Print">🖨️ Export</button>
-        
+        <!-- Row 3: Admin & Tree Owner Management Controls -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
             <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
             <button class="admin-btn" onclick="signOutAdmin()">Sign Out</button>
         </div>
-    </div>
-    <div id="searchDropdown"></div>
 
-    <div id="tree"></div>
+        <div id="searchDropdown"></div>
+    </header>
+
+    <!-- Canvas area: Starts exactly below header -->
+    <main id="tree"></main>
     <div id="toast">Saved</div>
 
     <!-- Floating Collapse / Expand Branches Button -->
