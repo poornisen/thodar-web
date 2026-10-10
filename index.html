@@ -34,6 +34,32 @@
             height: 100%;
         }
 
+        /* Print Media Styles: hides UI controls, formats for paper */
+        @media print {
+            body, html {
+                background: #ffffff !important;
+                color: #000000 !important;
+                overflow: visible !important;
+                width: auto !important;
+                height: auto !important;
+            }
+            #topHeader, #topBar, #collapseDock, #toast, .modal-overlay, #searchDropdown {
+                display: none !important;
+            }
+            #tree {
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+            .bft-dark {
+                --bft-bg-color: #ffffff !important;
+            }
+            @page {
+                size: landscape;
+                margin: 8mm;
+            }
+        }
+
         /* Deceased Visual Treatment */
         .deceased image, .deceased img {
             filter: grayscale(100%) contrast(105%) !important;
@@ -93,7 +119,7 @@
             color: #ffffff;
         }
 
-        /* Sub-Header: Search & Lineage Perspective Filter */
+        /* Sub-Header: Search, Filter, and Export Controls */
         #topBar {
             position: fixed;
             top: 40px;
@@ -138,7 +164,6 @@
             color: #7b7b94;
         }
 
-        /* Lineage Perspective Dropdown */
         #viewFilterSelect {
             background: #232332;
             color: #d1d1e0;
@@ -149,7 +174,7 @@
             padding: 6px 8px;
             outline: none;
             cursor: pointer;
-            max-width: 155px;
+            max-width: 140px;
         }
 
         #adminControls {
@@ -393,7 +418,7 @@
         </button>
     </div>
 
-    <!-- Sub-Bar: Search & Lineage Perspective Filter -->
+    <!-- Sub-Bar: Search, Perspective Filter, Export & Admin Controls -->
     <div id="topBar">
         <div id="secretLogo" onclick="handleSecretTap()" title="">
             <svg viewBox="0 0 24 24">
@@ -402,15 +427,15 @@
         </div>
         <input type="text" id="searchInput" placeholder="Search relative..." oninput="handleSearch(this.value)" />
 
-        <!-- Lineage Filter Dropdown -->
         <select id="viewFilterSelect" onchange="changeLineageView(this.value)">
             <option value="all">Full Family Tree</option>
             <option value="blood_only">Blood Lineage (No In-Laws)</option>
             <option value="males_with_wives">Paternal Line (With Wives)</option>
             <option value="males_only">Direct Paternal (Males Only)</option>
         </select>
+
+        <button class="admin-btn" style="background: #232332; border-color: #43435c;" onclick="openExportModal()" title="Export or Print">🖨️ Export</button>
         
-        <!-- Admin Controls Toolbar -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
             <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
@@ -427,6 +452,16 @@
         <button class="collapse-btn" onclick="toggleExpandCollapseAll()">
             <span id="expandAllIcon">⊟</span> <span id="expandAllText">Collapse Branches</span>
         </button>
+    </div>
+
+    <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
+    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; color:#f8fafc; z-index:99999; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
+        <div style="max-width:460px; background:#1e293b; padding:32px; border-radius:14px; border:1px solid #334155; box-shadow:0 12px 36px rgba(0,0,0,0.65);">
+            <div id="gatekeeperIcon" style="font-size:46px; margin-bottom:14px;">⏳</div>
+            <h2 id="gatekeeperTitle" style="margin:0 0 10px; font-size:20px; color:#ffffff;">Under Review</h2>
+            <p id="gatekeeperMessage" style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 22px;"></p>
+            <a href="?tree=thodar_devendran_01" style="display:inline-block; padding:9px 18px; background:#38bdf8; color:#0f172a; text-decoration:none; font-weight:600; border-radius:8px; font-size:13px;">Return to Demo Tree</a>
+        </div>
     </div>
 
     <!-- 1. Passcode Unlock Gatekeeper (Every Launch / Non-Persistent Session) -->
@@ -448,7 +483,29 @@
         </div>
     </div>
 
-    <!-- 2. Dedicated Passcode Manager Modal (Admin Only) -->
+    <!-- 2. Export & Print Modal -->
+    <div id="exportModal" class="modal-overlay">
+        <div class="modal-box" style="text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🖨️</div>
+            <h3 style="margin-bottom: 6px;">Export Family Tree</h3>
+            <p style="font-size: 13px; color: #a0a0b8; margin-top: 0; margin-bottom: 20px;">
+                Generate an offline copy or print your lineage chart.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-save" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px;" onclick="triggerPrintPDF()">
+                    📄 Print / Save as PDF
+                </button>
+                <button class="btn btn-save" style="background: #232332; border: 1px solid #43435c; color: #d1d1e0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px;" onclick="triggerExportSVG()">
+                    🖼️ Export Standalone Vector (SVG)
+                </button>
+            </div>
+            <div class="modal-actions" style="justify-content: center; margin-top: 18px;">
+                <button class="btn btn-cancel" style="width: 100%;" onclick="closeExportModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Dedicated Passcode Manager Modal (Admin Only) -->
     <div id="managePasscodeModal" class="modal-overlay">
         <div class="modal-box">
             <h3>Family Access Passcode</h3>
@@ -466,7 +523,7 @@
         </div>
     </div>
 
-    <!-- 3. Admin Authentication Modal (Stealth 7-Tap) -->
+    <!-- 4. Admin Authentication Modal (Stealth 7-Tap) -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h3 id="authTitle">Admin Authentication</h3>
@@ -638,7 +695,9 @@
         const db = firebase.firestore();
         const storage = firebase.storage();
 
-        const TENANT_ID = "thodar_devendran_01";
+        // Extract tenant ID from URL parameter '?tree=...' (e.g. ?tree=test_client_tree)
+        const urlParams = new URLSearchParams(window.location.search);
+        const TENANT_ID = urlParams.get("tree") || "thodar_devendran_01";
         const treeDocRef = db.collection("trees").doc(TENANT_ID);
 
         let currentUser = null;
@@ -703,11 +762,10 @@
         }
         familyData.forEach(syncNodeTags);
 
-        // --- 2. SESSION-ONLY PASSCODE GATEKEEPER (ZERO LOCAL PERSISTENCE) ---
+        // --- 2. SESSION-ONLY PASSCODE GATEKEEPER ---
         let isPasscodeUnlocked = false;
 
         function checkPasscodeAuthorization() {
-            // Admin is always authorized
             if (isAdmin || isPasscodeUnlocked) {
                 document.getElementById("passcodeModal").style.display = "none";
                 return true;
@@ -768,7 +826,6 @@
             document.getElementById("inputPasscode").value = "";
             showToast("Session Locked & Exited");
 
-            // If running inside Android WebView and Bridge exposes closeApp
             if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
                 window.AndroidBridge.closeApp();
             }
@@ -856,7 +913,6 @@
                 workingSet = malesOnly;
             }
 
-            // Apply branch collapsing on top of the perspective filter
             if (collapsedParentIds.size > 0) {
                 const hiddenNodeIds = new Set();
                 collapsedParentIds.forEach(parentId => {
@@ -954,7 +1010,6 @@
                         if (node.place) parts.push(node.place);
                         if (node.notes) parts.push(node.notes);
 
-                        // If branch is currently collapsed, display badge
                         const count = getChildrenCount(node.id);
                         if (count > 0 && (collapsedParentIds.has(node.id) || (node.pids && node.pids.some(p => collapsedParentIds.has(p))))) {
                             parts.push(`[ ${count} Children Hidden ▼ ]`);
@@ -1224,10 +1279,44 @@
             }
         }
 
+        // Gatekeeper Screen Handlers
+        function showPendingScreen(treeName) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⏳";
+            document.getElementById("gatekeeperTitle").innerText = "Tree Awaiting Approval";
+            document.getElementById("gatekeeperMessage").innerHTML = 
+                `<strong>${treeName}</strong> is currently pending administrator activation. Access will unlock once approved.`;
+        }
+
+        function showErrorScreen(title, message) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⚠️";
+            document.getElementById("gatekeeperTitle").innerText = title;
+            document.getElementById("gatekeeperMessage").innerText = message;
+        }
+
+        function hideOverlayScreen() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+        }
+
         // --- 11. REAL-TIME CLOUD LISTENER ---
         treeDocRef.onSnapshot((docSnapshot) => {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
+
+                // Approval Gate Check: If not approved and not admin, lock view
+                if (data.isApproved === false && !isAdmin) {
+                    showPendingScreen(data.treeName || TENANT_ID);
+                    return;
+                }
+
+                hideOverlayScreen();
+
                 if (data.treeName) {
                     document.getElementById("treeTitleHeader").innerText = data.treeName;
                 }
@@ -1249,8 +1338,13 @@
                         }
                     }
                 }
-            } else if (isAdmin) {
-                saveToStorage();
+            } else {
+                if (isAdmin) {
+                    saveToStorage();
+                } else {
+                    showErrorScreen("Tree Not Found", `The family tree '${TENANT_ID}' does not exist.`);
+                    return;
+                }
             }
 
             checkPasscodeAuthorization();
@@ -1484,6 +1578,67 @@
             closeEditModal();
             family.load(filterTreeData(currentFilterMode));
             saveToStorage();
+        }
+
+        // --- 12. CLIENT-SIDE EXPORT & NATIVE PRINT ---
+        function openExportModal() {
+            document.getElementById("exportModal").style.display = "flex";
+        }
+
+        function closeExportModal() {
+            document.getElementById("exportModal").style.display = "none";
+        }
+
+        function triggerPrintPDF() {
+            closeExportModal();
+
+            if (family) {
+                family.fit();
+            }
+
+            setTimeout(() => {
+                if (window.AndroidBridge && typeof window.AndroidBridge.printTree === "function") {
+                    window.AndroidBridge.printTree();
+                } else {
+                    window.print();
+                }
+            }, 350);
+        }
+
+        function triggerExportSVG() {
+            closeExportModal();
+            showToast("Exporting Vector Chart...");
+
+            try {
+                const svgEl = document.querySelector("#tree svg");
+                if (!svgEl) {
+                    alert("Tree canvas not found.");
+                    return;
+                }
+
+                const serializer = new XMLSerializer();
+                let svgSource = serializer.serializeToString(svgEl);
+
+                if (!svgSource.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+                    svgSource = svgSource.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+                }
+
+                const blob = new Blob([svgSource], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const fileName = (document.getElementById("treeTitleHeader").innerText || "family_tree").replace(/\s+/g, '_') + ".svg";
+
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast("Vector SVG Downloaded");
+            } catch (err) {
+                console.error("Vector export error:", err);
+                alert("Vector export error: " + err.message);
+            }
         }
     </script>
 </body>
