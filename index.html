@@ -734,20 +734,25 @@
 
         function loadLocalData() {
             try {
+                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
                 if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
                     const androidData = window.AndroidBridge.loadFamilyData();
                     if (androidData && androidData.trim().length > 5) {
                         return JSON.parse(androidData);
                     }
                 }
-                const webData = localStorage.getItem("thodar_family_data");
+                const webData = localStorage.getItem(storageKey);
                 if (webData && webData.trim().length > 5) {
                     return JSON.parse(webData);
                 }
             } catch (err) {
                 console.error("Local data load error:", err);
             }
-            return JSON.parse(JSON.stringify(defaultSeedData));
+            // Only seed Devendran's family if we are explicitly on the devendran tree
+            if (TENANT_ID === "thodar_devendran_01") {
+                return JSON.parse(JSON.stringify(defaultSeedData));
+            }
+            return [];
         }
 
         familyData = loadLocalData();
@@ -985,6 +990,29 @@
         function initFamilyTree() {
             const container = document.getElementById("tree");
             container.innerHTML = "";
+
+            if (!familyData || familyData.length === 0) {
+                const currentTreeName = document.getElementById("treeTitleHeader").innerText || "Family Tree";
+                container.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; text-align:center; padding:24px; box-sizing:border-box;">
+                        <div style="font-size:52px; margin-bottom:14px;">🌱</div>
+                        <h3 style="color:#ffffff; font-size:22px; margin:0 0 10px;">${currentTreeName}</h3>
+                        <p style="max-width:380px; font-size:14px; line-height:1.6; margin:0 0 22px; color:#9d9db5;">
+                            This lineage chart is ready. No family members have been added yet.
+                        </p>
+                        ${isAdmin ? `
+                            <button class="btn btn-save" style="padding:10px 20px; font-size:14px;" onclick="openAddRelativeModal(null)">
+                                + Add First Member (Root Founder)
+                            </button>
+                        ` : `
+                            <div style="background:#232332; border:1px solid #37374d; border-radius:8px; padding:10px 16px; font-size:13px; color:#7b7b94;">
+                                Awaiting admin to add root ancestors. Tap the search icon 7 times for admin login.
+                            </div>
+                        `}
+                    </div>
+                `;
+                return;
+            }
 
             const treeConfig = {
                 template: "john",
@@ -1254,7 +1282,8 @@
                 familyData.forEach(syncNodeTags);
                 const jsonStr = JSON.stringify(familyData);
 
-                localStorage.setItem("thodar_family_data", jsonStr);
+                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
+                localStorage.setItem(storageKey, jsonStr);
                 if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
                     window.AndroidBridge.saveFamilyData(jsonStr);
                 }
@@ -1326,16 +1355,15 @@
                     treeDocRef.set({ passcode: "1938" }, { merge: true });
                 }
 
-                if (data.members) {
-                    const cloudMembers = data.members;
-                    if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
-                        familyData = cloudMembers;
-                        familyData.forEach(syncNodeTags);
-                        if (family) family.load(filterTreeData(currentFilterMode));
-                        localStorage.setItem("thodar_family_data", JSON.stringify(familyData));
-                        if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
-                            window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
-                        }
+                const cloudMembers = Array.isArray(data.members) ? data.members : [];
+                if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
+                    familyData = cloudMembers;
+                    familyData.forEach(syncNodeTags);
+                    initFamilyTree();
+                    const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
+                    localStorage.setItem(storageKey, JSON.stringify(familyData));
+                    if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                        window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
                     }
                 }
             } else {
@@ -1409,7 +1437,15 @@
             if (!isAdmin) return;
             selectedNodeId = nodeId;
             const person = familyData.find(m => m.id == nodeId);
-            document.getElementById('modalTitle').innerText = "Add Relative to " + (person ? person.name : "");
+            const relGroup = document.getElementById('relType').closest('.form-group');
+
+            if (!nodeId || !person) {
+                document.getElementById('modalTitle').innerText = "Add First Family Member (Root Founder)";
+                if (relGroup) relGroup.style.display = "none";
+            } else {
+                document.getElementById('modalTitle').innerText = "Add Relative to " + person.name;
+                if (relGroup) relGroup.style.display = "block";
+            }
             document.getElementById('personName').value = "";
             document.getElementById('personBirth').value = "";
             document.getElementById('personDeath').value = "";
@@ -1445,9 +1481,12 @@
             const place = document.getElementById('personPlace').value.trim();
             const photo = document.getElementById('addPhotoUrl').value.trim();
             const notes = document.getElementById('personNotes').value.trim();
-            const target = familyData.find(m => m.id == selectedNodeId);
+            const target = selectedNodeId ? familyData.find(m => m.id == selectedNodeId) : null;
 
-            if (!target) return;
+            if (!target && familyData.length > 0) {
+                alert("Please select a relative first.");
+                return;
+            }
 
             const newId = Date.now();
             const newMember = { 
@@ -1463,7 +1502,11 @@
             if (photo) newMember.photo = photo;
             if (notes) newMember.notes = notes;
 
-            if (relType === "child") {
+            if (!target || familyData.length === 0) {
+                // First member (Root Founder)
+                newMember.id = 1;
+                familyData.push(newMember);
+            } else if (relType === "child") {
                 let fatherId = null;
                 let motherId = null;
 
