@@ -10,8 +10,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 
-    <!-- D3.js v7 (Free Open-Source BSD-3 License) -->
+    <!-- Balkan FamilyTreeJS Engine -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
     <style>
@@ -50,77 +51,8 @@
             position: relative;
             overflow: hidden;
         }
-        #tree svg {
-            width: 100%;
-            height: 100%;
-            cursor: grab;
-        }
-        #tree svg:active {
-            cursor: grabbing;
-        }
 
-        /* D3 Node & Link Visual Styling */
-        .tree-link {
-            fill: none;
-            stroke: #475569;
-            stroke-width: 2px;
-        }
-        .marriage-link {
-            fill: none;
-            stroke: #f59e0b;
-            stroke-width: 2.5px;
-            stroke-dasharray: 4, 3;
-        }
-        .node-card {
-            cursor: pointer;
-            transition: transform 0.15s ease;
-        }
-        .node-card:hover {
-            filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.35));
-        }
-        .node-bg {
-            fill: #1e293b;
-            stroke: #334155;
-            stroke-width: 1.5px;
-            rx: 10px;
-            ry: 10px;
-        }
-        .node-bg.gender-male {
-            stroke: #0284c7;
-        }
-        .node-bg.gender-female {
-            stroke: #f43f5e;
-        }
-        .node-bg.deceased {
-            stroke: #64748b;
-            stroke-dasharray: 4, 3;
-        }
-        .node-name {
-            fill: #f8fafc;
-            font-size: 13px;
-            font-weight: 600;
-            text-anchor: middle;
-        }
-        .node-details {
-            fill: #94a3b8;
-            font-size: 10px;
-            text-anchor: middle;
-        }
-        .node-avatar-circle {
-            stroke-width: 2px;
-        }
-        .node-avatar-circle.gender-male {
-            stroke: #38bdf8;
-        }
-        .node-avatar-circle.gender-female {
-            stroke: #fb7185;
-        }
-        .node-avatar-circle.deceased {
-            stroke: #64748b;
-            filter: grayscale(100%);
-        }
-
-        /* Print Media Styles */
+        /* Print Media Styles: hides UI controls, formats for paper */
         @media print {
             body, html {
                 background: #ffffff !important;
@@ -130,7 +62,7 @@
                 height: auto !important;
                 display: block !important;
             }
-            #appHeader, #collapseDock, #toast, .modal-overlay, #searchDropdown {
+            #appHeader, #topHeader, #topBar, #collapseDock, #toast, .modal-overlay, #searchDropdown {
                 display: none !important;
             }
             #tree {
@@ -138,13 +70,26 @@
                 width: 100% !important;
                 height: auto !important;
             }
+            .bft-dark {
+                --bft-bg-color: #ffffff !important;
+            }
             @page {
                 size: landscape;
                 margin: 8mm;
             }
         }
 
-        /* Header Row 1: Title + Action Buttons */
+        /* Deceased Visual Treatment */
+        .deceased image, .deceased img {
+            filter: grayscale(100%) contrast(105%) !important;
+            opacity: 0.88;
+        }
+        .deceased rect {
+            stroke: #59596e !important;
+            stroke-dasharray: 4, 2;
+        }
+
+        /* Header Row 1: Title + Switch & Exit Buttons */
         #topHeader {
             display: flex;
             align-items: center;
@@ -325,7 +270,7 @@
             opacity: 1;
         }
 
-        /* Floating Center / Fit Button */
+        /* Floating Collapse/Expand Button (Bottom Right) */
         #collapseDock {
             position: fixed;
             right: 14px;
@@ -472,14 +417,84 @@
             cursor: pointer;
             width: fit-content;
         }
-    </style>
+    
+        /* D3 Family Tree Styling */
+        .tree-svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        .tree-svg:active {
+            cursor: grabbing;
+        }
+        .tree-link {
+            fill: none;
+            stroke: #475569;
+            stroke-width: 2px;
+        }
+        .tree-marriage-link {
+            stroke: #ec4899;
+            stroke-width: 2px;
+            stroke-dasharray: 4, 3;
+        }
+        .person-card {
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        .person-card:hover {
+            filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.35));
+        }
+        .card-bg {
+            fill: #1e293b;
+            stroke: #334155;
+            stroke-width: 1.5px;
+            rx: 10px;
+        }
+        .card-bg.male {
+            border-left: 4px solid #38bdf8;
+            stroke: #0284c7;
+        }
+        .card-bg.female {
+            stroke: #f472b6;
+        }
+        .card-bg.deceased {
+            stroke: #64748b;
+            stroke-dasharray: 4, 3;
+            fill: #18202f;
+        }
+        .person-name {
+            fill: #f8fafc;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .person-meta {
+            fill: #94a3b8;
+            font-size: 11px;
+        }
+        .avatar-circle {
+            stroke: #475569;
+            stroke-width: 1.5px;
+        }
+        .branch-badge {
+            cursor: pointer;
+            fill: #0ea5e9;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .branch-badge-bg {
+            fill: #0369a1;
+            rx: 6px;
+            cursor: pointer;
+        }
+</style>
 </head>
 <body>
 
-    <!-- Header: Dynamic Navbar -->
+    <!-- App Header: Dynamic, non-overlapping navbar -->
     <header id="appHeader">
+        <!-- Row 1: Lineage Title + Action Buttons -->
         <div id="topHeader">
-            <div id="treeTitleHeader">Devendran Family Lineage</div>
+            <div id="treeTitleHeader">Thodar Family Tree</div>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <button class="admin-btn" style="background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8;" onclick="openUnlockDialog()" title="Switch Tree">
                     🔄 Switch Tree
@@ -490,6 +505,7 @@
             </div>
         </div>
 
+        <!-- Row 2: Search, Perspective Views & Export -->
         <div id="topBar">
             <div id="secretLogo" onclick="handleSecretTap()" title="">
                 <svg viewBox="0 0 24 24">
@@ -508,6 +524,7 @@
             <button class="admin-btn" style="background: #232332; border-color: #43435c;" onclick="openExportModal()" title="Export or Print">🖨️ Export</button>
         </div>
 
+        <!-- Row 3: Admin & Tree Owner Management Controls -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
             <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
@@ -517,18 +534,37 @@
         <div id="searchDropdown"></div>
     </header>
 
-    <!-- D3 Interactive Tree Container -->
+    <!-- Canvas area: Starts exactly below header -->
     <main id="tree"></main>
     <div id="toast">Saved</div>
 
-    <!-- Floating Fit to Screen Button -->
+    <!-- Floating Collapse / Expand Branches Button -->
     <div id="collapseDock">
-        <button class="collapse-btn" onclick="fitTreeToScreen()">
-            <span>🎯</span> <span>Fit View</span>
+        <button class="collapse-btn" onclick="toggleExpandCollapseAll()">
+            <span id="expandAllIcon">⊟</span> <span id="expandAllText">Collapse Branches</span>
         </button>
     </div>
 
-    <!-- Unlock Lineage Gatekeeper -->
+        <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
+    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; color:#f8fafc; z-index:99990; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
+        <div style="max-width:440px; background:#1e293b; padding:32px; border-radius:14px; border:1px solid #334155; box-shadow:0 12px 36px rgba(0,0,0,0.65);">
+            <div id="gatekeeperIcon" style="font-size:46px; margin-bottom:14px;">⏳</div>
+            <h2 id="gatekeeperTitle" style="margin:0 0 10px; font-size:20px; color:#ffffff;">Under Review</h2>
+            <p id="gatekeeperMessage" style="color:#94a3b8; font-size:14px; line-height:1.6; margin:0 0 22px;">
+                This lineage chart is currently pending administrator activation.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px; justify-content:center;">
+                <button class="btn btn-save" style="padding:10px 18px; font-size:13px;" onclick="document.getElementById('gatekeeperOverlay').style.display='none'; openUnlockDialog();">
+                    🔑 Enter Tree Code & PIN
+                </button>
+                <button class="btn btn-cancel" style="padding:8px 18px; font-size:12px;" onclick="document.getElementById('gatekeeperOverlay').style.display='none'; openRequestTreeModal();">
+                    ➕ Request a New Tree
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Passcode & Tree Code Unlock Gatekeeper -->
     <div id="passcodeModal" class="modal-overlay" style="display: none;">
         <div class="modal-box" style="text-align: center;">
             <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
@@ -552,23 +588,7 @@
         </div>
     </div>
 
-    <!-- Node Context Actions Dialog -->
-    <div id="nodeActionModal" class="modal-overlay">
-        <div class="modal-box" style="text-align: center;">
-            <h3 id="nodeActionTitle" style="color: #38bdf8; margin-bottom: 6px;">Person Options</h3>
-            <p id="nodeActionSub" style="font-size: 13px; color: #94a3b8; margin-bottom: 18px;"></p>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn btn-save" onclick="openAddRelativeFromAction()">➕ Add Relative</button>
-                <button class="btn btn-save" style="background:#232332; border:1px solid #43435c;" onclick="openEditFromAction()">✏️ Edit Details</button>
-                <button class="btn btn-cancel" style="color:#ef4444; border:1px solid rgba(239,68,68,0.4);" onclick="deletePersonFromAction()">🗑️ Remove Person</button>
-            </div>
-            <div class="modal-actions" style="justify-content: center; margin-top: 18px;">
-                <button class="btn btn-cancel" style="width: 100%;" onclick="closeNodeActionModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Export & Print Modal -->
+    <!-- 2. Export & Print Modal -->
     <div id="exportModal" class="modal-overlay">
         <div class="modal-box" style="text-align: center;">
             <div style="font-size: 32px; margin-bottom: 8px;">🖨️</div>
@@ -590,12 +610,12 @@
         </div>
     </div>
 
-    <!-- Passcode Manager Modal -->
+    <!-- 3. Dedicated Tree Code & PIN Manager Modal (Owner & Admin) -->
     <div id="managePasscodeModal" class="modal-overlay">
         <div class="modal-box">
             <h3>Manage Tree Code & PINs</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
-                Share the Tree Code and Viewer PIN with relatives to grant read-only access.
+                Share the Tree Code and Viewer PIN with family members to let them view your chart safely.
             </p>
             <div class="form-group">
                 <label>Your 6-Digit Tree Code</label>
@@ -622,12 +642,12 @@
         </div>
     </div>
 
-    <!-- Request New Tree Modal -->
+    <!-- Request New Family Tree Modal -->
     <div id="requestTreeModal" class="modal-overlay">
         <div class="modal-box">
             <h3 style="color:#38bdf8;">Request New Family Tree</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: -6px; margin-bottom: 16px;">
-                A unique 6-digit Tree Code will be assigned to your family.
+                A unique 6-digit Tree Code will be assigned to your family. You will be able to build your tree once approved.
             </p>
             <div class="form-group">
                 <label>Family / Lineage Name *</label>
@@ -649,7 +669,7 @@
         </div>
     </div>
 
-    <!-- Admin Authentication Modal (Stealth 7-Tap) -->
+    <!-- 4. Admin Authentication Modal (Stealth 7-Tap) -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h3 id="authTitle">Admin Authentication</h3>
@@ -662,7 +682,7 @@
                 <input type="password" id="authPassword" placeholder="••••••••" />
             </div>
             <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 12px;">
-                <label style="color: #4da3ff;">Update Owner Passcode</label>
+                <label style="color: #4da3ff;">Set / Update Family Passcode</label>
                 <input type="text" id="adminNewPasscode" placeholder="e.g. 1938" />
             </div>
             <div id="authError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
@@ -678,7 +698,7 @@
         <div class="modal-box">
             <h3 id="modalTitle">Add Relative</h3>
             <div class="form-group">
-                <label>Relationship</label>
+                <label>Relationship to Relative</label>
                 <select id="relType">
                     <option value="child">Child (Son / Daughter)</option>
                     <option value="spouse">Spouse / Partner</option>
@@ -723,7 +743,7 @@
             <div class="form-group">
                 <label>Profile Photo</label>
                 <div class="photo-picker-container">
-                    <img id="addPhotoPreview" class="photo-preview" src="https://via.placeholder.com/150/334155/f8fafc?text=Avatar" alt="" />
+                    <img id="addPhotoPreview" class="photo-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%2364748b'><circle cx='32' cy='24' r='14'/><path d='M10 58c0-12 10-20 22-20s22 8 22 20z'/></svg>" alt="" />
                     <div class="photo-picker-actions">
                         <button type="button" class="btn-choose" onclick="document.getElementById('addPhotoFile').click()">Choose Photo</button>
                         <span id="addUploadStatus" class="upload-status">Gallery / Files</span>
@@ -784,7 +804,7 @@
             <div class="form-group">
                 <label>Profile Photo</label>
                 <div class="photo-picker-container">
-                    <img id="editPhotoPreview" class="photo-preview" src="https://via.placeholder.com/150/334155/f8fafc?text=Avatar" alt="" />
+                    <img id="editPhotoPreview" class="photo-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%2364748b'><circle cx='32' cy='24' r='14'/><path d='M10 58c0-12 10-20 22-20s22 8 22 20z'/></svg>" alt="" />
                     <div class="photo-picker-actions">
                         <button type="button" class="btn-choose" onclick="document.getElementById('editPhotoFile').click()">Choose Photo</button>
                         <span id="editUploadStatus" class="upload-status">Gallery / Files</span>
@@ -820,40 +840,31 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
+        const functions = firebase.app().functions("asia-south1");
 
+        // 6-Digit Tree Code initialization (URL parameter first, then localStorage memory, blank fallback)
         const urlParams = new URLSearchParams(window.location.search);
-        let TENANT_ID = urlParams.get("tree") || localStorage.getItem("thodar_active_tree") || "thodar_devendran_01";
-        let treeDocRef = db.collection("trees").doc(TENANT_ID);
+        let TENANT_ID = urlParams.get("tree") || localStorage.getItem("thodar_active_tree") || "";
+        let treeDocRef = TENANT_ID ? db.collection("trees").doc(TENANT_ID) : null;
         let treeUnsubscribe = null;
 
         let currentUser = null;
-        let isAdmin = false;
-        let isOwnerSession = false;
-        let isPasscodeUnlocked = false;
+        let isAdmin = false;           // Super-Admin logged in via stealth 7-tap
+        let isOwnerSession = false;    // Tree Owner unlocked via Owner PIN
+        let isPasscodeUnlocked = false;// Unlocked as either Owner or Viewer
         let selectedNodeId = null;
         let currentFilterMode = "all";
 
-        let cloudOwnerPasscode = "1938";
+        let cloudOwnerPasscode = "";
         let cloudViewerPasscode = "";
+
+        const collapsedParentIds = new Set();
 
         function canEdit() {
             return isAdmin || isOwnerSession;
         }
 
-        const defaultSeedData = [
-            { id: 1, pids: [2], name: "N. Devendran", gender: "male", birthYear: "1938", deathYear: "", isDeceased: false, place: "Salem", notes: "*" },
-            { id: 2, pids: [1], name: "D. Leelavathy", gender: "female", birthYear: "1945", deathYear: "", isDeceased: false, place: "Salem" },
-            { id: 3, fid: 1, mid: 2, pids: [4], name: "D. Manivannan", gender: "male", birthYear: "1966", isDeceased: false, place: "Salem" },
-            { id: 4, pids: [3], name: "K.V. Lakshmi", gender: "female", birthYear: "1972", isDeceased: false, place: "Erode" },
-            { id: 5, fid: 1, mid: 2, pids: [7], name: "D. Sumathy", gender: "female", birthYear: "1969", isDeceased: false, place: "Salem" },
-            { id: 7, pids: [5], name: "S. Sundaresan", gender: "male", birthYear: "1964", isDeceased: false, place: "Coimbatore" },
-            { id: 8, fid: 1, mid: 2, pids: [9], name: "D. Vijayarani", gender: "female", birthYear: "1972", isDeceased: false, place: "Salem" },
-            { id: 9, pids: [8], name: "G.V. Ramesh", gender: "male", birthYear: "1968", isDeceased: false, place: "Tiruppur" },
-            { id: 10, fid: 1, mid: 2, pids: [11], name: "D. Senthil Kumar", gender: "male", birthYear: "1975", isDeceased: false, place: "Salem" },
-            { id: 11, pids: [10], name: "S. Poornima", gender: "female", birthYear: "1982", isDeceased: false, place: "Trichy" },
-            { id: 6, fid: 3, mid: 4, name: "P.M. Karthik Jogaian", gender: "male", birthYear: "1997", isDeceased: false, place: "Bangalore" },
-            { id: 12, fid: 3, mid: 4, name: "P.M. Ganga Devi", gender: "female", birthYear: "2001", isDeceased: false, place: "Salem" }
-        ];
+        const defaultSeedData = [];
 
         function showToast(msg) {
             const toast = document.getElementById("toast");
@@ -865,27 +876,45 @@
         let familyData = [];
 
         function loadLocalData() {
+            if (!TENANT_ID) return [];
             try {
-                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
-                if (TENANT_ID === "thodar_devendran_01" && window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
+                const storageKey = "thodar_family_data_" + TENANT_ID;
+                if (window.AndroidBridge && typeof window.AndroidBridge.loadFamilyData === "function") {
                     const androidData = window.AndroidBridge.loadFamilyData();
-                    if (androidData && androidData.trim().length > 5) return JSON.parse(androidData);
+                    if (androidData && androidData.trim().length > 5) {
+                        try {
+                            const parsed = JSON.parse(androidData);
+                            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                        } catch(e) {}
+                    }
                 }
                 const webData = localStorage.getItem(storageKey);
-                if (webData && webData.trim().length > 5) return JSON.parse(webData);
+                if (webData && webData.trim().length > 5) {
+                    return JSON.parse(webData);
+                }
             } catch (err) {
                 console.error("Local data load error:", err);
             }
-            if (TENANT_ID === "thodar_devendran_01") return JSON.parse(JSON.stringify(defaultSeedData));
             return [];
         }
 
         familyData = loadLocalData();
 
+        function syncNodeTags(member) {
+            if (!member.tags) member.tags = [];
+            if (member.isDeceased) {
+                if (!member.tags.includes("deceased")) member.tags.push("deceased");
+            } else {
+                member.tags = member.tags.filter(t => t !== "deceased");
+            }
+        }
+        familyData.forEach(syncNodeTags);
+
         // --- 2. MULTI-TIER 6-DIGIT TREE CODE & PIN GATEKEEPER ---
         function updateControlBar() {
             const adminControls = document.getElementById("adminControls");
             const badge = adminControls ? adminControls.querySelector(".admin-badge") : null;
+
             if (canEdit()) {
                 if (adminControls) adminControls.style.display = "flex";
                 if (badge) badge.innerText = isAdmin ? "Super-Admin" : "Tree Owner";
@@ -895,6 +924,14 @@
         }
 
         function checkPasscodeAuthorization() {
+            if (!TENANT_ID) {
+                const container = document.getElementById("tree");
+                if (container) container.innerHTML = "";
+                openUnlockDialog();
+                return false;
+            }
+
+            // Check if session was already authenticated prior to screen rotation / reload
             const sessionRole = sessionStorage.getItem("thodar_session_" + TENANT_ID);
             if (sessionRole) {
                 isPasscodeUnlocked = true;
@@ -914,8 +951,11 @@
         }
 
         function openUnlockDialog() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+
             const modal = document.getElementById("passcodeModal");
-            document.getElementById("inputTreeId").value = (TENANT_ID === "test1" || TENANT_ID === "thodar_devendran_01") ? "" : TENANT_ID;
+            document.getElementById("inputTreeId").value = TENANT_ID || "";
             document.getElementById("inputPasscode").value = "";
             document.getElementById("passcodeError").style.display = "none";
             modal.style.display = "flex";
@@ -932,37 +972,27 @@
                 return;
             }
 
-            db.collection("trees").doc(enteredTreeId).get().then(doc => {
-                if (!doc.exists) {
-                    errDiv.innerText = `Tree '${enteredTreeId}' does not exist.`;
-                    errDiv.style.display = "block";
-                    return;
-                }
+            errDiv.style.display = "none";
+            showToast("Verifying credentials...");
 
-                const data = doc.data();
-                if (data.isApproved === false && !isAdmin) {
-                    errDiv.innerText = `Tree '${enteredTreeId}' is currently pending administrator approval.`;
-                    errDiv.style.display = "block";
-                    return;
-                }
+            const verifyTreePasscode = functions.httpsCallable("verifyTreePasscode");
 
-                const ownerCode = String(data.passcode || "");
-                const viewerCode = String(data.viewerPasscode || "");
-
-                if (inputVal === ownerCode) {
-                    switchActiveTree(enteredTreeId, true, data);
-                    showToast("Unlocked as Tree Owner (Editor)");
-                } else if (viewerCode && inputVal === viewerCode) {
-                    switchActiveTree(enteredTreeId, false, data);
-                    showToast("Unlocked as Family Viewer");
-                } else {
-                    errDiv.innerText = "Incorrect PIN for this Tree Code.";
+            verifyTreePasscode({ treeId: enteredTreeId, pin: inputVal })
+                .then(result => {
+                    const { token, role, treeName } = result.data;
+                    return auth.signInWithCustomToken(token).then(() => {
+                        switchActiveTree(enteredTreeId, role === "owner");
+                        if (treeName) {
+                            document.getElementById("treeTitleHeader").innerText = treeName;
+                        }
+                        showToast(`Unlocked as ${role === "owner" ? "Tree Owner (Editor)" : "Family Viewer"}`);
+                    });
+                })
+                .catch(err => {
+                    console.error("Verification error:", err);
+                    errDiv.innerText = err.message || "Incorrect PIN or authentication error.";
                     errDiv.style.display = "block";
-                }
-            }).catch(err => {
-                errDiv.innerText = "Error: " + err.message;
-                errDiv.style.display = "block";
-            });
+                });
         }
 
         function switchActiveTree(newTreeId, asOwner, docData) {
@@ -970,23 +1000,38 @@
             localStorage.setItem("thodar_active_tree", newTreeId);
             isPasscodeUnlocked = true;
             isOwnerSession = asOwner;
+
+            // Retain active unlock status across screen rotations
             sessionStorage.setItem("thodar_session_" + newTreeId, asOwner ? "owner" : "viewer");
 
             document.getElementById("passcodeModal").style.display = "none";
             updateControlBar();
 
+            // Reset branch collapse states
+            collapsedParentIds.clear();
+
             if (docData) {
-                if (docData.treeName) document.getElementById("treeTitleHeader").innerText = docData.treeName;
-                if (docData.passcode) cloudOwnerPasscode = String(docData.passcode);
-                if (docData.viewerPasscode !== undefined) cloudViewerPasscode = String(docData.viewerPasscode);
+                if (docData.treeName) {
+                    document.getElementById("treeTitleHeader").innerText = docData.treeName;
+                }
+                if (docData.passcode) {
+                    cloudOwnerPasscode = String(docData.passcode);
+                }
+                if (docData.viewerPasscode !== undefined) {
+                    cloudViewerPasscode = String(docData.viewerPasscode);
+                }
+                // Load the new tree members directly from Firestore payload
                 familyData = Array.isArray(docData.members) ? docData.members : [];
-                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
+                const storageKey = "thodar_family_data_" + TENANT_ID;
                 localStorage.setItem(storageKey, JSON.stringify(familyData));
             } else {
                 familyData = loadLocalData();
             }
 
-            renderD3FamilyTree();
+            familyData.forEach(syncNodeTags);
+            initFamilyTree();
+
+            // Rebind the live listener to the new tree document
             treeDocRef = db.collection("trees").doc(TENANT_ID);
             setupRealtimeListener();
         }
@@ -1012,29 +1057,42 @@
                 alert("Owner PIN cannot be empty.");
                 return;
             }
+
             if (newViewer && newOwner === newViewer) {
                 alert("Owner PIN and Viewer PIN cannot be identical. Please pick distinct PINs to keep editing and viewing access separate.");
                 return;
             }
 
-            cloudOwnerPasscode = newOwner;
-            cloudViewerPasscode = newViewer;
+            showToast("Updating PINs...");
+            const updateTreePasscode = functions.httpsCallable("updateTreePasscode");
 
-            treeDocRef.set({ passcode: newOwner, viewerPasscode: newViewer }, { merge: true })
+            updateTreePasscode({
+                treeId: TENANT_ID,
+                newOwnerPin: newOwner,
+                newViewerPin: newViewer
+            })
             .then(() => {
+                cloudOwnerPasscode = newOwner;
+                cloudViewerPasscode = newViewer;
                 closePasscodeManager();
                 showToast("PINs Updated Successfully");
             })
-            .catch(err => alert("Error saving PINs: " + err.message));
+            .catch(err => {
+                alert("Error updating PINs: " + (err.message || err));
+            });
         }
 
         function copyFamilyShareDetails() {
             const viewerCode = document.getElementById("manageViewerPasscodeField").value.trim() || cloudViewerPasscode;
             const shareUrl = `${window.location.origin}${window.location.pathname}?tree=${TENANT_ID}`;
             const msg = `🌿 View our family tree on Thodar:\nLink: ${shareUrl}\nTree Code: ${TENANT_ID}\nViewer PIN: ${viewerCode || "(None set yet)"}`;
-            navigator.clipboard.writeText(msg).then(() => showToast("Share Link & Code Copied!")).catch(() => alert(msg));
+
+            navigator.clipboard.writeText(msg)
+                .then(() => showToast("Share Link & Code Copied!"))
+                .catch(() => alert(msg));
         }
 
+        // --- REQUEST A NEW TREE MODAL ---
         function openRequestTreeModal() {
             document.getElementById("passcodeModal").style.display = "none";
             document.getElementById("reqError").style.display = "none";
@@ -1052,7 +1110,9 @@
             for (let attempts = 0; attempts < 10; attempts++) {
                 const code = Math.floor(100000 + Math.random() * 900000).toString();
                 const checkDoc = await db.collection("trees").doc(code).get();
-                if (!checkDoc.exists) return code;
+                if (!checkDoc.exists) {
+                    return code;
+                }
             }
             return Date.now().toString().slice(-6);
         }
@@ -1087,7 +1147,7 @@
                 });
 
                 closeRequestTreeModal();
-                alert(`Tree Requested Successfully! 🎉\n\nYour Assigned 6-Digit Tree Code is: ${assignedCode}\nLineage Name: ${treeName}`);
+                alert(`Tree Requested Successfully! 🎉\n\nYour Assigned 6-Digit Tree Code is: ${assignedCode}\nLineage Name: ${treeName}\n\nYour registration has been submitted for administrator activation. Keep this 6-Digit code safe!`);
                 window.location.search = `?tree=${assignedCode}`;
             } catch (err) {
                 btn.disabled = false;
@@ -1097,27 +1157,58 @@
             }
         }
 
+        // --- 3. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
         function handleExitSession() {
             isPasscodeUnlocked = false;
             isOwnerSession = false;
+            // Clear screen-rotation session on deliberate lock/exit
             sessionStorage.removeItem("thodar_session_" + TENANT_ID);
-            if (isAdmin) auth.signOut().catch(() => {});
+
+            auth.signOut().catch(() => {});
+
             updateControlBar();
             openUnlockDialog();
             showToast("Session Locked");
+
             if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
                 window.AndroidBridge.closeApp();
             }
         }
 
-        // --- 3. D3.JS LINEAGE RENDERING ENGINE (OPEN SOURCE) ---
-        let d3ZoomBehavior = null;
-        let d3SvgSelection = null;
-        let d3GSelection = null;
+        // --- 4. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
+        function getChildrenCount(personId) {
+            const person = familyData.find(m => m.id == personId);
+            if (!person) return 0;
+            const pids = person.pids || [];
+            return familyData.filter(m => (m.fid == personId || m.mid == personId) || 
+                                          (pids.includes(m.fid) || pids.includes(m.mid))).length;
+        }
+
+        function getDescendantIds(parentId) {
+            const descendants = new Set();
+            const person = familyData.find(m => m.id == parentId);
+            const parentIds = [parentId];
+            if (person && person.pids) parentIds.push(...person.pids);
+
+            function findChildren(currentParentIds) {
+                const directChildren = familyData.filter(m => currentParentIds.includes(m.fid) || currentParentIds.includes(m.mid));
+                directChildren.forEach(child => {
+                    if (!descendants.has(child.id)) {
+                        descendants.add(child.id);
+                        const childAndSpouseIds = [child.id];
+                        if (child.pids) childAndSpouseIds.push(...child.pids);
+                        findChildren(childAndSpouseIds);
+                    }
+                });
+            }
+
+            findChildren(parentIds);
+            return descendants;
+        }
 
         function filterTreeData(mode) {
             let workingSet = JSON.parse(JSON.stringify(familyData));
-            const rootFounderId = (workingSet[0] && workingSet[0].id) ? workingSet[0].id : 1;
+            const rootFounderId = 1;
 
             if (mode === "blood_only") {
                 const bloodMembers = workingSet.filter(m => (m.id === rootFounderId) || m.fid || m.mid);
@@ -1165,176 +1256,159 @@
                 malesOnly.forEach(m => { m.pids = []; });
                 workingSet = malesOnly;
             }
+
+            if (collapsedParentIds.size > 0) {
+                const hiddenNodeIds = new Set();
+                collapsedParentIds.forEach(parentId => {
+                    const branchDescendants = getDescendantIds(parentId);
+                    branchDescendants.forEach(id => hiddenNodeIds.add(id));
+                });
+                workingSet = workingSet.filter(m => !hiddenNodeIds.has(m.id));
+            }
+
             return workingSet;
         }
 
         function changeLineageView(mode) {
             currentFilterMode = mode;
-            renderD3FamilyTree();
-            showToast("View Updated");
+            if (family) {
+                family.load(filterTreeData(mode));
+                showToast("View Updated");
+            }
         }
 
-        function calculateGenealogyLayout(members) {
-            const nodeWidth = 140;
-            const nodeHeight = 72;
-            const horizontalGap = 35;
-            const verticalGap = 90;
+        // --- 5. COLLAPSE / EXPAND CONTROLS ---
+        function toggleSingleBranch(parentId) {
+            const count = getChildrenCount(parentId);
+            if (count === 0) return;
 
-            const memberMap = new Map();
-            members.forEach(m => memberMap.set(m.id, Object.assign({}, m)));
-
-            // Assign generations / levels
-            const levels = new Map();
-            function getLevel(id, visited = new Set()) {
-                if (visited.has(id)) return 0;
-                visited.add(id);
-                if (levels.has(id)) return levels.get(id);
-
-                const m = memberMap.get(id);
-                if (!m) return 0;
-
-                let parentLevel = -1;
-                if (m.fid && memberMap.has(m.fid)) parentLevel = Math.max(parentLevel, getLevel(m.fid, visited));
-                if (m.mid && memberMap.has(m.mid)) parentLevel = Math.max(parentLevel, getLevel(m.mid, visited));
-
-                if (parentLevel !== -1) {
-                    const lvl = parentLevel + 1;
-                    levels.set(id, lvl);
-                    return lvl;
-                }
-
-                // If married to someone who already has a level, share it
-                if (m.pids && m.pids.length > 0) {
-                    for (const pid of m.pids) {
-                        if (levels.has(pid)) {
-                            levels.set(id, levels.get(pid));
-                            return levels.get(pid);
-                        }
-                    }
-                }
-
-                levels.set(id, 0);
-                return 0;
+            if (collapsedParentIds.has(parentId)) {
+                collapsedParentIds.delete(parentId);
+                showToast("Branch Expanded");
+            } else {
+                collapsedParentIds.add(parentId);
+                showToast("Branch Collapsed");
             }
 
-            members.forEach(m => getLevel(m.id));
-
-            // Sync partner levels
-            members.forEach(m => {
-                const myLvl = levels.get(m.id) || 0;
-                if (m.pids) {
-                    m.pids.forEach(pid => {
-                        const partnerLvl = levels.get(pid) || 0;
-                        const maxLvl = Math.max(myLvl, partnerLvl);
-                        levels.set(m.id, maxLvl);
-                        levels.set(pid, maxLvl);
-                    });
-                }
-            });
-
-            // Group nodes by level
-            const levelBuckets = new Map();
-            members.forEach(m => {
-                const lvl = levels.get(m.id) || 0;
-                if (!levelBuckets.has(lvl)) levelBuckets.set(lvl, []);
-                levelBuckets.get(lvl).push(memberMap.get(m.id));
-            });
-
-            // Order members on each level placing married couples adjacently
-            const positionedNodes = [];
-            const processedPartners = new Set();
-
-            const sortedLevels = Array.from(levelBuckets.keys()).sort((a, b) => a - b);
-            sortedLevels.forEach(lvl => {
-                const list = levelBuckets.get(lvl);
-                const orderedList = [];
-
-                list.forEach(m => {
-                    if (processedPartners.has(m.id)) return;
-                    orderedList.push(m);
-                    processedPartners.add(m.id);
-
-                    if (m.pids && m.pids.length > 0) {
-                        m.pids.forEach(pid => {
-                            const spouse = list.find(s => s.id === pid);
-                            if (spouse && !processedPartners.has(spouse.id)) {
-                                orderedList.push(spouse);
-                                processedPartners.add(spouse.id);
-                            }
-                        });
-                    }
-                });
-
-                // Calculate X positions for this tier
-                const totalTierWidth = orderedList.length * (nodeWidth + horizontalGap) - horizontalGap;
-                const startX = -totalTierWidth / 2;
-
-                orderedList.forEach((node, i) => {
-                    node.x = startX + i * (nodeWidth + horizontalGap);
-                    node.y = lvl * (nodeHeight + verticalGap);
-                    node.width = nodeWidth;
-                    node.height = nodeHeight;
-                    positionedNodes.push(node);
-                });
-            });
-
-            // Generate marital and parent-child pedigree links
-            const nodePositions = new Map();
-            positionedNodes.forEach(n => nodePositions.set(n.id, n));
-
-            const links = [];
-            const processedMarriages = new Set();
-
-            positionedNodes.forEach(m => {
-                // 1. Spousal links
-                if (m.pids && m.pids.length > 0) {
-                    m.pids.forEach(pid => {
-                        const spouse = nodePositions.get(pid);
-                        if (!spouse) return;
-                        const pairKey = [m.id, pid].sort().join("_");
-                        if (!processedMarriages.has(pairKey)) {
-                            processedMarriages.add(pairKey);
-                            links.push({
-                                type: "marriage",
-                                source: m,
-                                target: spouse
-                            });
-                        }
-                    });
-                }
-
-                // 2. Parent-child links
-                if (m.fid || m.mid) {
-                    const father = nodePositions.get(m.fid);
-                    const mother = nodePositions.get(m.mid);
-
-                    if (father && mother) {
-                        links.push({
-                            type: "child",
-                            source: {
-                                x: (father.x + mother.x + nodeWidth) / 2 - nodeWidth / 2,
-                                y: Math.max(father.y, mother.y)
-                            },
-                            target: m
-                        });
-                    } else if (father) {
-                        links.push({ type: "child", source: father, target: m });
-                    } else if (mother) {
-                        links.push({ type: "child", source: mother, target: m });
-                    }
-                }
-            });
-
-            return { nodes: positionedNodes, links: links, nodeWidth, nodeHeight };
+            family.load(filterTreeData(currentFilterMode));
+            updateDockButtonState();
         }
 
-        function renderD3FamilyTree() {
+        function toggleExpandCollapseAll() {
+            if (collapsedParentIds.size === 0) {
+                familyData.forEach(member => {
+                    if (getChildrenCount(member.id) > 0 && (member.fid || member.mid)) {
+                        collapsedParentIds.add(member.id);
+                    }
+                });
+                showToast("Branches Collapsed");
+            } else {
+                collapsedParentIds.clear();
+                showToast("All Branches Expanded");
+            }
+
+            family.load(filterTreeData(currentFilterMode));
+            updateDockButtonState();
+        }
+
+        function updateDockButtonState() {
+            const btnText = document.getElementById("expandAllText");
+            const btnIcon = document.getElementById("expandAllIcon");
+            if (collapsedParentIds.size > 0) {
+                btnText.innerText = "Expand All";
+                btnIcon.innerText = "⊞";
+            } else {
+                btnText.innerText = "Collapse Branches";
+                btnIcon.innerText = "⊟";
+            }
+        }
+
+        // --- 6. D3.JS OPEN-SOURCE FAMILY TREE ENGINE (100% FREE & PERMISSIVE) ---
+        let family = null;
+        let d3ZoomBehavior = null;
+        let d3SvgSelection = null;
+        let d3GroupSelection = null;
+
+        function getSpouse(member, nodesById) {
+            if (!member || !member.pids) return null;
+            for (let pid of member.pids) {
+                if (nodesById[pid]) return nodesById[pid];
+            }
+            return null;
+        }
+
+        function getChildrenOfCouple(p1Id, p2Id, workingSet) {
+            const children = [];
+            for (let m of workingSet) {
+                const f = m.fid;
+                const mid = m.mid;
+                if ((f == p1Id || (p2Id && f == p2Id)) || (mid == p1Id || (p2Id && mid == p2Id))) {
+                    if (m.id != p1Id && m.id != p2Id) {
+                        children.push(m);
+                    }
+                }
+            }
+            // Sort children chronologically by birthYear
+            children.sort((a, b) => {
+                const yA = parseInt(a.birthYear, 10) || 9999;
+                const yB = parseInt(b.birthYear, 10) || 9999;
+                return yA - yB;
+            });
+            return children;
+        }
+
+        function buildHierarchyGraph(workingSet) {
+            const nodesById = {};
+            workingSet.forEach(m => { nodesById[m.id] = m; });
+
+            function buildUnit(person) {
+                const spouse = getSpouse(person, nodesById);
+                const spId = spouse ? spouse.id : null;
+                const isBranchCollapsed = collapsedParentIds.has(person.id) || (spouse && collapsedParentIds.has(spouse.id));
+                const children = isBranchCollapsed ? [] : getChildrenOfCouple(person.id, spId, workingSet);
+
+                return {
+                    id: person.id,
+                    primary: person,
+                    spouse: spouse,
+                    isCollapsed: isBranchCollapsed,
+                    childrenCount: getChildrenCount(person.id),
+                    children: children.map(c => buildUnit(c))
+                };
+            }
+
+            // Identify clean lineage founders (nodes with no parents in dataset)
+            const roots = [];
+            const seen = new Set();
+
+            workingSet.forEach(m => {
+                const hasParents = (m.fid && nodesById[m.fid]) || (m.mid && nodesById[m.mid]);
+                if (!hasParents) {
+                    const sp = getSpouse(m, nodesById);
+                    if (sp && ((sp.fid && nodesById[sp.fid]) || (sp.mid && nodesById[sp.mid]))) {
+                        // In-law spouse of a descendant; not a lineage root
+                        return;
+                    }
+                    if (!seen.has(m.id)) {
+                        seen.add(m.id);
+                        if (sp) seen.add(sp.id);
+                        roots.push(m);
+                    }
+                }
+            });
+
+            if (roots.length === 0 && workingSet.length > 0) {
+                roots.push(workingSet[0]);
+            }
+
+            return roots.map(r => buildUnit(r));
+        }
+
+        function initFamilyTree() {
             const container = document.getElementById("tree");
             container.innerHTML = "";
 
-            const members = filterTreeData(currentFilterMode);
-
-            if (!members || members.length === 0) {
+            if (!familyData || familyData.length === 0) {
                 const currentTreeName = document.getElementById("treeTitleHeader").innerText || "Family Tree";
                 container.innerHTML = `
                     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; text-align:center; padding:24px; box-sizing:border-box;">
@@ -1347,317 +1421,407 @@
                             <button class="btn btn-save" style="padding:10px 20px; font-size:14px;" onclick="openAddRelativeModal(null)">
                                 + Add First Member (Root Founder)
                             </button>
-                        ` : ''}
+                        ` : `
+                            <div style="background:#232332; border:1px solid #37374d; border-radius:8px; padding:10px 16px; font-size:13px; color:#7b7b94;">
+                                Awaiting tree owner to add the root ancestor.
+                            </div>
+                        `}
                     </div>
                 `;
                 return;
             }
 
-            const { nodes, links, nodeWidth, nodeHeight } = calculateGenealogyLayout(members);
+            const currentVisible = filterTreeData(currentFilterMode);
+            const hierarchyForest = buildHierarchyGraph(currentVisible);
 
-            const svg = d3.select("#tree")
-                .append("svg")
+            const width = container.clientWidth || window.innerWidth;
+            const height = container.clientHeight || (window.innerHeight - 100);
+
+            const svg = d3.select(container).append("svg")
+                .attr("class", "tree-svg")
                 .attr("width", "100%")
                 .attr("height", "100%");
 
             d3SvgSelection = svg;
 
-            // Pan and Pinch-to-Zoom Handler
-            const g = svg.append("g");
-            d3GSelection = g;
+            const g = svg.append("g").attr("class", "tree-canvas-group");
+            d3GroupSelection = g;
 
             d3ZoomBehavior = d3.zoom()
-                .scaleExtent([0.2, 3])
+                .scaleExtent([0.15, 3])
                 .on("zoom", (event) => {
                     g.attr("transform", event.transform);
                 });
 
             svg.call(d3ZoomBehavior).on("dblclick.zoom", null);
 
-            // Render Links
-            const linkGroup = g.append("g").attr("class", "links-layer");
+            // Card Geometry Constants
+            const CARD_W = 160;
+            const CARD_H = 74;
+            const SPOUSE_GAP = 28;
+            const LEVEL_GAP = 120;
+            const SIBLING_GAP = 40;
 
-            linkGroup.selectAll(".marriage-link")
-                .data(links.filter(d => d.type === "marriage"))
-                .enter()
-                .append("line")
-                .attr("class", "marriage-link")
-                .attr("x1", d => d.source.x + (d.source.x < d.target.x ? nodeWidth : 0))
-                .attr("y1", d => d.source.y + nodeHeight / 2)
-                .attr("x2", d => d.target.x + (d.target.x < d.source.x ? nodeWidth : 0))
-                .attr("y2", d => d.target.y + nodeHeight / 2);
+            const allRenderedPositions = new Map();
 
-            linkGroup.selectAll(".tree-link")
-                .data(links.filter(d => d.type === "child"))
-                .enter()
-                .append("path")
-                .attr("class", "tree-link")
-                .attr("d", d => {
-                    const startX = d.source.x + nodeWidth / 2;
-                    const startY = d.source.y + nodeHeight;
-                    const endX = d.target.x + nodeWidth / 2;
-                    const endY = d.target.y;
-                    const midY = (startY + endY) / 2;
-                    return `M ${startX} ${startY} V ${midY} H ${endX} V ${endY}`;
-                });
+            let currentXOffset = 60;
+            const startYOffset = 60;
 
-            // Render Person Cards
-            const nodeGroup = g.append("g").attr("class", "nodes-layer");
+            hierarchyForest.forEach(rootUnit => {
+                const rootHierarchy = d3.hierarchy(rootUnit, d => d.children);
 
-            const nodeEnter = nodeGroup.selectAll(".node-card")
-                .data(nodes)
-                .enter()
-                .append("g")
-                .attr("class", "node-card")
-                .attr("transform", d => `translate(${d.x}, ${d.y})`)
-                .on("click", (event, d) => onNodeClicked(d));
-
-            // Card Background
-            nodeEnter.append("rect")
-                .attr("class", d => `node-bg gender-${d.gender} ${d.isDeceased ? 'deceased' : ''}`)
-                .attr("width", nodeWidth)
-                .attr("height", nodeHeight);
-
-            // Circular Avatar Placeholder / Image
-            const avatarGroup = nodeEnter.append("g")
-                .attr("transform", "translate(22, 36)");
-
-            avatarGroup.append("circle")
-                .attr("class", d => `node-avatar-circle gender-${d.gender} ${d.isDeceased ? 'deceased' : ''}`)
-                .attr("r", 15)
-                .attr("fill", "#0f172a");
-
-            avatarGroup.filter(d => !!d.photo).append("clipPath")
-                .attr("id", d => `clip-${d.id}`)
-                .append("circle")
-                .attr("r", 14);
-
-            avatarGroup.filter(d => !!d.photo).append("image")
-                .attr("href", d => d.photo)
-                .attr("x", -15)
-                .attr("y", -15)
-                .attr("width", 30)
-                .attr("height", 30)
-                .attr("preserveAspectRatio", "xMidYMid slice")
-                .attr("clip-path", d => `url(#clip-${d.id})`);
-
-            // Name
-            nodeEnter.append("text")
-                .attr("class", "node-name")
-                .attr("x", nodeWidth / 2 + 10)
-                .attr("y", 28)
-                .text(d => d.name && d.name.length > 13 ? d.name.slice(0, 12) + "…" : (d.name || "Unknown"));
-
-            // Dates & Subtitle
-            nodeEnter.append("text")
-                .attr("class", "node-details")
-                .attr("x", nodeWidth / 2 + 10)
-                .attr("y", 46)
-                .text(d => {
-                    const parts = [];
-                    if (d.birthYear) parts.push("b. " + d.birthYear);
-                    if (d.deathYear) parts.push("d. " + d.deathYear);
-                    if (d.place) parts.push(d.place);
-                    return parts.join(" • ") || "Relative";
-                });
-
-            // Initial view auto-fit
-            setTimeout(fitTreeToScreen, 100);
-        }
-
-        function fitTreeToScreen() {
-            if (!d3SvgSelection || !d3GSelection || !d3ZoomBehavior) return;
-
-            const container = document.getElementById("tree");
-            const width = container.clientWidth || window.innerWidth;
-            const height = container.clientHeight || (window.innerHeight - 100);
-
-            const bounds = d3GSelection.node().getBBox();
-            if (!bounds || bounds.width === 0 || bounds.height === 0) return;
-
-            const fullWidth = bounds.width;
-            const fullHeight = bounds.height;
-            const midX = bounds.x + fullWidth / 2;
-            const midY = bounds.y + fullHeight / 2;
-
-            const scale = Math.min(1.2, Math.max(0.35, 0.85 / Math.max(fullWidth / width, fullHeight / height)));
-            const translate = [width / 2 - scale * midX, height / 2 - scale * midY];
-
-            d3SvgSelection.transition()
-                .duration(450)
-                .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-        }
-
-        // Node Tap Actions
-        function onNodeClicked(node) {
-            selectedNodeId = node.id;
-            if (canEdit()) {
-                document.getElementById("nodeActionTitle").innerText = node.name;
-                document.getElementById("nodeActionSub").innerText = `${node.gender === 'male' ? 'Male' : 'Female'} • ${node.place || 'Hometown not set'}`;
-                document.getElementById("nodeActionModal").style.display = "flex";
-            } else {
-                jumpToPerson(node.id);
-            }
-        }
-
-        function closeNodeActionModal() {
-            document.getElementById("nodeActionModal").style.display = "none";
-        }
-
-        function openAddRelativeFromAction() {
-            closeNodeActionModal();
-            openAddRelativeModal(selectedNodeId);
-        }
-
-        function openEditFromAction() {
-            closeNodeActionModal();
-            openEditModal(selectedNodeId);
-        }
-
-        function deletePersonFromAction() {
-            if (!canEdit()) return;
-            const person = familyData.find(m => m.id == selectedNodeId);
-            if (!confirm(`Are you sure you want to remove ${person ? person.name : 'this relative'}?`)) return;
-
-            familyData = familyData.filter(item => item.id != selectedNodeId);
-            familyData.forEach(item => {
-                if (item.pids && Array.isArray(item.pids)) item.pids = item.pids.filter(p => p != selectedNodeId);
-                if (item.fid == selectedNodeId) delete item.fid;
-                if (item.mid == selectedNodeId) delete item.mid;
-            });
-
-            closeNodeActionModal();
-            renderD3FamilyTree();
-            saveToStorage();
-            showToast("Person Removed");
-        }
-
-        // --- 4. PERSISTENCE & DATA HANDLERS ---
-        function saveToStorage() {
-            if (!canEdit()) return;
-            try {
-                const jsonStr = JSON.stringify(familyData);
-                const storageKey = TENANT_ID === "thodar_devendran_01" ? "thodar_family_data" : ("thodar_family_data_" + TENANT_ID);
-                localStorage.setItem(storageKey, jsonStr);
-                if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
-                    window.AndroidBridge.saveFamilyData(jsonStr);
+                // Compute width required by each subtree unit
+                function computeUnitWidth(node) {
+                    const unitHasSpouse = !!node.data.spouse;
+                    const thisUnitWidth = unitHasSpouse ? (CARD_W * 2 + SPOUSE_GAP) : CARD_W;
+                    if (!node.children || node.children.length === 0) {
+                        node._subtreeWidth = thisUnitWidth;
+                        return thisUnitWidth;
+                    }
+                    let childrenTotalWidth = 0;
+                    node.children.forEach((c, idx) => {
+                        childrenTotalWidth += computeUnitWidth(c);
+                        if (idx > 0) childrenTotalWidth += SIBLING_GAP;
+                    });
+                    node._subtreeWidth = Math.max(thisUnitWidth, childrenTotalWidth);
+                    return node._subtreeWidth;
                 }
 
-                treeDocRef.set({
-                    treeName: document.getElementById("treeTitleHeader").innerText || "Family Tree",
-                    tenantId: TENANT_ID,
-                    passcode: cloudOwnerPasscode,
-                    viewerPasscode: cloudViewerPasscode,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    members: familyData
-                }, { merge: true }).then(() => {
-                    showToast("Cloud Synced");
-                }).catch(err => {
-                    console.error("Firestore sync error:", err);
-                    showToast("Sync Error: " + err.message);
-                });
-            } catch (err) {
-                console.error("Save error:", err);
-            }
-        }
+                computeUnitWidth(rootHierarchy);
 
-        function setupRealtimeListener() {
-            if (treeUnsubscribe) treeUnsubscribe();
+                // Position nodes recursively in SVG coordinates
+                function assignPositions(node, leftBound, level) {
+                    const y = startYOffset + level * (CARD_H + LEVEL_GAP);
+                    const unitHasSpouse = !!node.data.spouse;
+                    const thisUnitW = unitHasSpouse ? (CARD_W * 2 + SPOUSE_GAP) : CARD_W;
 
-            treeUnsubscribe = treeDocRef.onSnapshot((docSnapshot) => {
-                if (docSnapshot.exists) {
-                    const data = docSnapshot.data();
-                    if (data.treeName) document.getElementById("treeTitleHeader").innerText = data.treeName;
-                    if (data.passcode) cloudOwnerPasscode = String(data.passcode);
-                    if (data.viewerPasscode !== undefined) cloudViewerPasscode = String(data.viewerPasscode);
+                    let x = leftBound + (node._subtreeWidth - thisUnitW) / 2;
+                    node.x = x;
+                    node.y = y;
 
-                    const cloudMembers = Array.isArray(data.members) ? data.members : [];
-                    if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
-                        familyData = cloudMembers;
-                        renderD3FamilyTree();
+                    if (node.children && node.children.length > 0) {
+                        let childLeft = leftBound;
+                        node.children.forEach((child) => {
+                            assignPositions(child, childLeft, level + 1);
+                            childLeft += child._subtreeWidth + SIBLING_GAP;
+                        });
                     }
                 }
-                checkPasscodeAuthorization();
-            }, (error) => {
-                console.warn("Firestore live listener offline:", error);
-                checkPasscodeAuthorization();
+
+                assignPositions(rootHierarchy, currentXOffset, 0);
+                currentXOffset += rootHierarchy._subtreeWidth + 100;
+
+                // Render Connectors (Orthogonal Pedigree Links)
+                rootHierarchy.descendants().forEach(node => {
+                    if (node.children && node.children.length > 0) {
+                        const unitHasSpouse = !!node.data.spouse;
+                        const parentCenterX = node.x + (unitHasSpouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
+                        const parentBottomY = node.y + CARD_H;
+                        const midBusY = parentBottomY + LEVEL_GAP / 2;
+
+                        // Down from parent
+                        g.append("path")
+                            .attr("class", "tree-link")
+                            .attr("d", `M ${parentCenterX} ${parentBottomY} L ${parentCenterX} ${midBusY}`);
+
+                        // Min and Max child X for horizontal bus bar
+                        const firstChild = node.children[0];
+                        const lastChild = node.children[node.children.length - 1];
+
+                        const firstChildCenterX = firstChild.x + (firstChild.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
+                        const lastChildCenterX = lastChild.x + (lastChild.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
+
+                        // Horizontal crossbar
+                        g.append("path")
+                            .attr("class", "tree-link")
+                            .attr("d", `M ${firstChildCenterX} ${midBusY} L ${lastChildCenterX} ${midBusY}`);
+
+                        // Down to each child
+                        node.children.forEach(child => {
+                            const childCenterX = child.x + (child.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
+                            const childTopY = child.y;
+                            g.append("path")
+                                .attr("class", "tree-link")
+                                .attr("d", `M ${childCenterX} ${midBusY} L ${childCenterX} ${childTopY}`);
+                        });
+                    }
+                });
+
+                // Render Person Cards
+                rootHierarchy.descendants().forEach(node => {
+                    const unit = node.data;
+                    const p1 = unit.primary;
+                    const p2 = unit.spouse;
+
+                    // Primary card
+                    renderPersonCard(g, p1, node.x, node.y, CARD_W, CARD_H);
+                    allRenderedPositions.set(p1.id, { x: node.x + CARD_W / 2, y: node.y + CARD_H / 2 });
+
+                    if (p2) {
+                        const p2X = node.x + CARD_W + SPOUSE_GAP;
+                        renderPersonCard(g, p2, p2X, node.y, CARD_W, CARD_H);
+                        allRenderedPositions.set(p2.id, { x: p2X + CARD_W / 2, y: node.y + CARD_H / 2 });
+
+                        // Marriage bridge between partners
+                        const mLineStartX = node.x + CARD_W;
+                        const mLineEndX = p2X;
+                        const mLineY = node.y + CARD_H / 2;
+
+                        g.append("line")
+                            .attr("class", "tree-marriage-link")
+                            .attr("x1", mLineStartX)
+                            .attr("y1", mLineY)
+                            .attr("x2", mLineEndX)
+                            .attr("y2", mLineY);
+
+                        g.append("circle")
+                            .attr("cx", (mLineStartX + mLineEndX) / 2)
+                            .attr("cy", mLineY)
+                            .attr("r", 5)
+                            .attr("fill", "#ec4899");
+                    }
+
+                    // Branch collapse badge button
+                    if (unit.childrenCount > 0) {
+                        const unitCenterX = node.x + (p2 ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
+                        const badgeY = node.y + CARD_H + 8;
+                        const badgeG = g.append("g")
+                            .attr("class", "branch-collapse-btn")
+                            .on("click", (e) => {
+                                e.stopPropagation();
+                                toggleSingleBranch(p1.id);
+                            });
+
+                        const badgeText = unit.isCollapsed ? `+ ${unit.childrenCount}` : `−`;
+                        const badgeW = unit.isCollapsed ? 34 : 20;
+
+                        badgeG.append("rect")
+                            .attr("class", "branch-badge-bg")
+                            .attr("x", unitCenterX - badgeW / 2)
+                            .attr("y", badgeY - 7)
+                            .attr("width", badgeW)
+                            .attr("height", 15);
+
+                        badgeG.append("text")
+                            .attr("class", "branch-badge")
+                            .attr("x", unitCenterX)
+                            .attr("y", badgeY + 4)
+                            .attr("text-anchor", "middle")
+                            .attr("fill", "#ffffff")
+                            .text(badgeText);
+                    }
+                });
             });
-        }
-        setupRealtimeListener();
 
-        // Search relative logic
-        function handleSearch(query) {
-            const dropdown = document.getElementById("searchDropdown");
-            if (!query || query.trim().length === 0) {
-                dropdown.style.display = "none";
-                return;
+            // Single Person Card Renderer Helper
+            function renderPersonCard(containerGroup, person, x, y, w, h) {
+                const cardG = containerGroup.append("g")
+                    .attr("class", "person-card")
+                    .attr("transform", `translate(${x}, ${y})`)
+                    .on("click", () => {
+                        if (canEdit()) {
+                            openEditModal(person.id);
+                        }
+                    });
+
+                // Background Rect
+                const cardBg = cardG.append("rect")
+                    .attr("class", `card-bg ${person.gender || "male"} ${person.isDeceased ? "deceased" : ""}`)
+                    .attr("width", w)
+                    .attr("height", h);
+
+                // Avatar / Photo
+                const avatarGroup = cardG.append("g").attr("transform", "translate(8, 12)");
+                const clipId = `avatar-clip-${person.id}-${Math.floor(Math.random() * 10000)}`;
+
+                cardG.append("clipPath")
+                    .attr("id", clipId)
+                    .append("circle")
+                    .attr("cx", 26)
+                    .attr("cy", 24)
+                    .attr("r", 20);
+
+                if (person.photo && person.photo.trim().length > 5) {
+                    cardG.append("image")
+                        .attr("href", person.photo)
+                        .attr("x", 6)
+                        .attr("y", 4)
+                        .attr("width", 40)
+                        .attr("height", 40)
+                        .attr("preserveAspectRatio", "xMidYMid slice")
+                        .attr("clip-path", `url(#${clipId})`)
+                        .attr("filter", person.isDeceased ? "grayscale(100%)" : "none");
+                } else {
+                    cardG.append("circle")
+                        .attr("cx", 26)
+                        .attr("cy", 24)
+                        .attr("r", 19)
+                        .attr("fill", person.gender === "female" ? "#db2777" : "#0284c7");
+
+                    cardG.append("text")
+                        .attr("x", 26)
+                        .attr("y", 30)
+                        .attr("text-anchor", "middle")
+                        .attr("fill", "#ffffff")
+                        .attr("font-size", "14px")
+                        .attr("font-weight", "700")
+                        .text((person.name || "?").charAt(0).toUpperCase());
+                }
+
+                cardG.append("circle")
+                    .attr("cx", 26)
+                    .attr("cy", 24)
+                    .attr("r", 20)
+                    .attr("class", "avatar-circle")
+                    .attr("fill", "none");
+
+                // Text Lines
+                // 1. Name
+                const textStartX = 54;
+                const displayName = person.name || "Unknown";
+                cardG.append("text")
+                    .attr("class", "person-name")
+                    .attr("x", textStartX)
+                    .attr("y", 22)
+                    .text(displayName.length > 13 ? displayName.slice(0, 12) + "…" : displayName);
+
+                // 2. Dates
+                let dates = "";
+                if (person.isDeceased) {
+                    if (person.birthYear && person.deathYear) {
+                        dates = `${person.birthYear} – ${person.deathYear}`;
+                    } else if (person.birthYear) {
+                        dates = `b. ${person.birthYear} (Late)`;
+                    } else {
+                        dates = "Late";
+                    }
+                } else {
+                    if (person.birthYear) dates = "b. " + person.birthYear;
+                }
+
+                cardG.append("text")
+                    .attr("class", "person-meta")
+                    .attr("x", textStartX)
+                    .attr("y", 38)
+                    .text(dates || (person.gender === "female" ? "Daughter / Wife" : "Son / Husband"));
+
+                // 3. Location / Marker
+                const extra = person.place || person.notes || "";
+                if (extra) {
+                    cardG.append("text")
+                        .attr("class", "person-meta")
+                        .attr("x", textStartX)
+                        .attr("y", 54)
+                        .attr("fill", "#38bdf8")
+                        .text(extra.length > 13 ? extra.slice(0, 12) + "…" : extra);
+                }
+
+                // Quick Add Relative Button (+ icon on hover/card)
+                if (canEdit()) {
+                    const addBtnG = cardG.append("g")
+                        .attr("transform", `translate(${w - 20}, 4)`)
+                        .attr("opacity", 0.8)
+                        .on("click", (e) => {
+                            e.stopPropagation();
+                            openAddRelativeModal(person.id);
+                        });
+
+                    addBtnG.append("circle")
+                        .attr("cx", 8)
+                        .attr("cy", 8)
+                        .attr("r", 8)
+                        .attr("fill", "#0284c7");
+
+                    addBtnG.append("text")
+                        .attr("x", 8)
+                        .attr("y", 12)
+                        .attr("text-anchor", "middle")
+                        .attr("fill", "#ffffff")
+                        .attr("font-size", "12px")
+                        .attr("font-weight", "700")
+                        .text("+");
+                }
             }
-            const q = query.toLowerCase();
-            const matches = familyData.filter(m => m.name && m.name.toLowerCase().includes(q));
 
-            if (matches.length === 0) {
-                dropdown.innerHTML = '<div class="search-item" style="color: #7b7b94;">No matching relatives found</div>';
-                dropdown.style.display = "block";
-                return;
-            }
+            // Expose uniform family controller API
+            family = {
+                fit: function() {
+                    if (!d3GroupSelection || !d3SvgSelection || !d3ZoomBehavior) return;
+                    const bounds = d3GroupSelection.node().getBBox();
+                    if (!bounds || bounds.width === 0 || bounds.height === 0) return;
 
-            dropdown.innerHTML = matches.map(m => `
-                <div class="search-item" onclick="jumpToPerson(${m.id})">
-                    <span>${m.name}</span>
-                    <span style="color: #7b7b94; font-size: 12px;">${m.place || (m.birthYear ? 'b. ' + m.birthYear : '')}</span>
-                </div>
-            `).join("");
-            dropdown.style.display = "block";
+                    const parentW = container.clientWidth || window.innerWidth;
+                    const parentH = container.clientHeight || (window.innerHeight - 100);
+
+                    const padding = 40;
+                    const scale = Math.min((parentW - padding * 2) / bounds.width, (parentH - padding * 2) / bounds.height, 1.2);
+                    const transform = d3.zoomIdentity
+                        .translate((parentW - bounds.width * scale) / 2 - bounds.x * scale, (parentH - bounds.height * scale) / 2 - bounds.y * scale)
+                        .scale(scale);
+
+                    d3SvgSelection.transition().duration(350).call(d3ZoomBehavior.transform, transform);
+                },
+                center: function(nodeId) {
+                    if (!allRenderedPositions.has(nodeId)) return;
+                    const pos = allRenderedPositions.get(nodeId);
+                    const parentW = container.clientWidth || window.innerWidth;
+                    const parentH = container.clientHeight || (window.innerHeight - 100);
+
+                    const scale = 1.0;
+                    const transform = d3.zoomIdentity
+                        .translate(parentW / 2 - pos.x * scale, parentH / 2 - pos.y * scale)
+                        .scale(scale);
+
+                    d3SvgSelection.transition().duration(400).call(d3ZoomBehavior.transform, transform);
+                },
+                load: function() {
+                    initFamilyTree();
+                }
+            };
+
+            // Initial auto-fit
+            setTimeout(() => {
+                if (family) family.fit();
+            }, 100);
         }
 
-        function jumpToPerson(nodeId) {
-            document.getElementById("searchDropdown").style.display = "none";
-            document.getElementById("searchInput").value = "";
-
-            const target = familyData.find(m => m.id == nodeId);
-            if (!target) return;
-
-            const { nodes } = calculateGenealogyLayout(familyData);
-            const found = nodes.find(n => n.id == nodeId);
-            if (!found || !d3SvgSelection || !d3ZoomBehavior) return;
-
-            const container = document.getElementById("tree");
-            const width = container.clientWidth || window.innerWidth;
-            const height = container.clientHeight || (window.innerHeight - 100);
-
-            const scale = 1.0;
-            const translate = [width / 2 - scale * (found.x + found.width / 2), height / 2 - scale * (found.y + found.height / 2)];
-
-            d3SvgSelection.transition()
-                .duration(450)
-                .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-        }
-
-        document.addEventListener("click", function(e) {
-            const topBar = document.getElementById("topBar");
-            const dropdown = document.getElementById("searchDropdown");
-            if (topBar && !topBar.contains(e.target) && dropdown) dropdown.style.display = "none";
-        });
-
-        // --- 5. STEALTH 7-TAP ADMIN GESTURE ---
+        // --- 7. STEALTH GESTURE LOGIC (7 RAPID TAPS) ---
         let tapCount = 0;
         let tapResetTimer = null;
+
         function handleSecretTap() {
             tapCount++;
             clearTimeout(tapResetTimer);
             tapResetTimer = setTimeout(() => { tapCount = 0; }, 3000);
+
             if (tapCount >= 7) {
                 tapCount = 0;
-                if (!isAdmin) openAuthModal();
-                else showToast("Already in Admin Mode");
+                if (!isAdmin) {
+                    openAuthModal();
+                } else {
+                    showToast("Already in Admin Mode");
+                }
             }
         }
 
+        if (window.location.hash === "#admin") {
+            setTimeout(openAuthModal, 500);
+        }
+
+        // --- 8. AUTHENTICATION & ADMIN CONTROLS ---
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
-            isAdmin = !!user;
-            updateControlBar();
-            renderD3FamilyTree();
+            const adminControls = document.getElementById("adminControls");
+
+            if (user) {
+                isAdmin = true;
+                adminControls.style.display = "flex";
+                showToast("Admin Mode Activated");
+            } else {
+                isAdmin = false;
+                adminControls.style.display = "none";
+            }
+            initFamilyTree();
             checkPasscodeAuthorization();
         });
 
@@ -1665,7 +1829,7 @@
             document.getElementById("authError").style.display = "none";
             document.getElementById("authEmail").value = "";
             document.getElementById("authPassword").value = "";
-            document.getElementById("adminNewPasscode").value = cloudOwnerPasscode;
+            document.getElementById("adminNewPasscode").value = "";
             document.getElementById("authModal").style.display = "flex";
         }
 
@@ -1685,23 +1849,30 @@
                 return;
             }
 
-            auth.signInWithEmailAndPassword(email, password).then(() => {
-                closeAuthModal();
-                if (newCode) {
-                    cloudOwnerPasscode = newCode;
-                    treeDocRef.set({ passcode: newCode }, { merge: true });
-                }
-            }).catch(err => {
-                errDiv.innerText = err.message;
-                errDiv.style.display = "block";
-            });
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    closeAuthModal();
+                    if (newCode) {
+                        cloudPasscode = newCode;
+                        treeDocRef.set({ passcode: newCode }, { merge: true });
+                    }
+                    if (window.location.hash === "#admin") {
+                        history.replaceState(null, null, ' ');
+                    }
+                })
+                .catch(err => {
+                    errDiv.innerText = err.message;
+                    errDiv.style.display = "block";
+                });
         }
 
         function signOutAdmin() {
-            auth.signOut().then(() => showToast("Returned to Viewer Mode"));
+            auth.signOut().then(() => {
+                showToast("Returned to Viewer Mode");
+            });
         }
 
-        // --- 6. IMAGE COMPRESSION & UPLOAD ---
+        // --- 9. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
         function compressImage(file, maxWidth, maxHeight, callback) {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -1712,6 +1883,7 @@
                     const canvas = document.createElement("canvas");
                     let width = img.width;
                     let height = img.height;
+
                     if (width > height) {
                         if (width > maxWidth) {
                             height = Math.round((height * maxWidth) / width);
@@ -1723,11 +1895,15 @@
                             height = maxHeight;
                         }
                     }
+
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => callback(blob), "image/jpeg", 0.82);
+
+                    canvas.toBlob((blob) => {
+                        callback(blob);
+                    }, "image/jpeg", 0.82);
                 };
             };
         }
@@ -1775,7 +1951,192 @@
             group.style.display = isDeceased ? 'block' : 'none';
         }
 
-        // Add Relative
+        // --- 10. CLOUD FIRESTORE PERSISTENCE ---
+        function saveToStorage() {
+            if (!canEdit() || !TENANT_ID || !treeDocRef) return;
+
+            try {
+                familyData.forEach(syncNodeTags);
+                const jsonStr = JSON.stringify(familyData);
+
+                const storageKey = "thodar_family_data_" + TENANT_ID;
+                localStorage.setItem(storageKey, jsonStr);
+                if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                    window.AndroidBridge.saveFamilyData(jsonStr);
+                }
+
+                treeDocRef.set({
+                    treeName: document.getElementById("treeTitleHeader").innerText || "Family Tree",
+                    tenantId: TENANT_ID,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    members: familyData
+                }, { merge: true })
+                .then(() => {
+                    showToast("Cloud Synced");
+                })
+                .catch(err => {
+                    console.error("Firestore sync error:", err);
+                    showToast("Sync Error: " + err.message);
+                });
+            } catch (err) {
+                console.error("Save error:", err);
+            }
+        }
+
+        // Gatekeeper Screen Handlers
+        function showPendingScreen(treeName) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⏳";
+            document.getElementById("gatekeeperTitle").innerText = "Tree Awaiting Approval";
+            document.getElementById("gatekeeperMessage").innerHTML = 
+                `<strong>${treeName}</strong> is currently pending administrator activation. Access will unlock once approved.`;
+        }
+
+        function showErrorScreen(title, message) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⚠️";
+            document.getElementById("gatekeeperTitle").innerText = title;
+            document.getElementById("gatekeeperMessage").innerText = message;
+        }
+
+        function hideOverlayScreen() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+        }
+
+        // --- 11. REAL-TIME CLOUD LISTENER ---
+        function showPendingScreen(treeName) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⏳";
+            document.getElementById("gatekeeperTitle").innerText = "Tree Awaiting Approval";
+            document.getElementById("gatekeeperMessage").innerHTML = 
+                `<strong>${treeName}</strong> is currently pending administrator activation. Access will unlock once approved.`;
+        }
+
+        function showErrorScreen(title, message) {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (!overlay) return;
+            overlay.style.display = "flex";
+            document.getElementById("gatekeeperIcon").innerText = "⚠️";
+            document.getElementById("gatekeeperTitle").innerText = title;
+            document.getElementById("gatekeeperMessage").innerText = message;
+        }
+
+        function hideOverlayScreen() {
+            const overlay = document.getElementById("gatekeeperOverlay");
+            if (overlay) overlay.style.display = "none";
+        }
+
+        function setupRealtimeListener() {
+            if (treeUnsubscribe) treeUnsubscribe();
+            if (!TENANT_ID || !treeDocRef) {
+                checkPasscodeAuthorization();
+                return;
+            }
+
+            treeUnsubscribe = treeDocRef.onSnapshot((docSnapshot) => {
+                if (docSnapshot.exists) {
+                    const data = docSnapshot.data();
+
+                    if (data.isApproved === false && !isAdmin) {
+                        showPendingScreen(data.treeName || TENANT_ID);
+                        return;
+                    }
+
+                    hideOverlayScreen();
+
+                    if (data.treeName) {
+                        document.getElementById("treeTitleHeader").innerText = data.treeName;
+                    }
+
+
+                    const cloudMembers = Array.isArray(data.members) ? data.members : [];
+                    if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
+                        familyData = cloudMembers;
+                        familyData.forEach(syncNodeTags);
+                        initFamilyTree();
+                        const storageKey = "thodar_family_data_" + TENANT_ID;
+                        localStorage.setItem(storageKey, JSON.stringify(familyData));
+                        if (window.AndroidBridge && typeof window.AndroidBridge.saveFamilyData === "function") {
+                            window.AndroidBridge.saveFamilyData(JSON.stringify(familyData));
+                        }
+                    }
+                } else {
+                    if (isAdmin) {
+                        saveToStorage();
+                    } else {
+                        showErrorScreen("Tree Not Found", `The family tree '${TENANT_ID}' does not exist.`);
+                        return;
+                    }
+                }
+
+                checkPasscodeAuthorization();
+            }, (error) => {
+                console.warn("Firestore live listener offline:", error);
+                checkPasscodeAuthorization();
+            });
+        }
+
+        setupRealtimeListener();
+
+        // Search & Jump logic
+        function handleSearch(query) {
+            const dropdown = document.getElementById("searchDropdown");
+            if (!query || query.trim().length === 0) {
+                dropdown.style.display = "none";
+                return;
+            }
+            const q = query.toLowerCase();
+            const currentVisible = filterTreeData(currentFilterMode);
+            const matches = currentVisible.filter(m => m.name && m.name.toLowerCase().includes(q));
+
+            if (matches.length === 0) {
+                dropdown.innerHTML = '<div class="search-item" style="color: #7b7b94;">No matching relatives found</div>';
+                dropdown.style.display = "block";
+                return;
+            }
+
+            dropdown.innerHTML = matches.map(m => `
+                <div class="search-item" onclick="jumpToPerson(${m.id})">
+                    <span>${m.name}</span>
+                    <span style="color: #7b7b94; font-size: 12px;">${m.place || (m.birthYear ? 'b. ' + m.birthYear : '')}</span>
+                </div>
+            `).join("");
+            dropdown.style.display = "block";
+        }
+
+        function jumpToPerson(nodeId) {
+            document.getElementById("searchDropdown").style.display = "none";
+            document.getElementById("searchInput").value = "";
+            if (family) {
+                collapsedParentIds.clear();
+                family.load(filterTreeData(currentFilterMode));
+                updateDockButtonState();
+
+                setTimeout(() => {
+                    family.center(nodeId, {
+                        valign: FamilyTree.valign.center,
+                        halign: FamilyTree.halign.center
+                    });
+                }, 150);
+            }
+        }
+
+        document.addEventListener("click", function(e) {
+            const topBar = document.getElementById("topBar");
+            const dropdown = document.getElementById("searchDropdown");
+            if (topBar && !topBar.contains(e.target) && dropdown) {
+                dropdown.style.display = "none";
+            }
+        });
+
+        /* --- ADD RELATIVE MODAL --- */
         function openAddRelativeModal(nodeId) {
             if (!canEdit()) return;
             selectedNodeId = nodeId;
@@ -1783,13 +2144,12 @@
             const relGroup = document.getElementById('relType').closest('.form-group');
 
             if (!nodeId || !person) {
-                document.getElementById('modalTitle').innerText = "Add First Member (Root Founder)";
+                document.getElementById('modalTitle').innerText = "Add First Family Member (Root Founder)";
                 if (relGroup) relGroup.style.display = "none";
             } else {
                 document.getElementById('modalTitle').innerText = "Add Relative to " + person.name;
                 if (relGroup) relGroup.style.display = "block";
             }
-
             document.getElementById('personName').value = "";
             document.getElementById('personBirth').value = "";
             document.getElementById('personDeath').value = "";
@@ -1797,7 +2157,7 @@
             toggleDeceasedFields('add', false);
             document.getElementById('personPlace').value = "";
             document.getElementById('addPhotoUrl').value = "";
-            document.getElementById('addPhotoPreview').src = "https://via.placeholder.com/150/334155/f8fafc?text=Avatar";
+            document.getElementById('addPhotoPreview').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%2364748b'><circle cx='32' cy='24' r='14'/><path d='M10 58c0-12 10-20 22-20s22 8 22 20z'/></svg>";
             document.getElementById('addUploadStatus').innerText = "Gallery / Files";
             document.getElementById('addUploadStatus').style.color = "#4da3ff";
             document.getElementById('personNotes').value = "";
@@ -1806,6 +2166,7 @@
 
         function closeAddModal() {
             document.getElementById('addModal').style.display = "none";
+            selectedNodeId = null;
         }
 
         function saveRelative() {
@@ -1826,8 +2187,19 @@
             const notes = document.getElementById('personNotes').value.trim();
             const target = selectedNodeId ? familyData.find(m => m.id == selectedNodeId) : null;
 
+            if (!target && familyData.length > 0) {
+                alert("Please select a relative first.");
+                return;
+            }
+
             const newId = Date.now();
-            const newMember = { id: newId, name: name, gender: gender, isDeceased: isDeceased };
+            const newMember = { 
+                id: newId, 
+                name: name, 
+                gender: gender,
+                isDeceased: isDeceased,
+                tags: isDeceased ? ["deceased"] : []
+            };
             if (birthYear) newMember.birthYear = birthYear;
             if (deathYear) newMember.deathYear = deathYear;
             if (place) newMember.place = place;
@@ -1838,35 +2210,60 @@
                 newMember.id = 1;
                 familyData.push(newMember);
             } else if (relType === "child") {
+                let fatherId = null;
+                let motherId = null;
+
                 if (target.gender === "male") {
-                    newMember.fid = target.id;
-                    if (target.pids && target.pids.length > 0) newMember.mid = target.pids[0];
+                    fatherId = target.id;
+                    motherId = (target.pids && target.pids.length > 0) ? target.pids[0] : null;
                 } else {
-                    newMember.mid = target.id;
-                    if (target.pids && target.pids.length > 0) newMember.fid = target.pids[0];
+                    motherId = target.id;
+                    fatherId = (target.pids && target.pids.length > 0) ? target.pids[0] : null;
                 }
+
+                if (fatherId) newMember.fid = fatherId;
+                if (motherId) newMember.mid = motherId;
                 familyData.push(newMember);
+
             } else if (relType === "spouse") {
                 newMember.pids = [target.id];
                 if (!target.pids) target.pids = [];
                 if (!target.pids.includes(newId)) target.pids.push(newId);
                 familyData.push(newMember);
+
             } else if (relType === "father") {
                 newMember.gender = "male";
+                if (target.mid) {
+                    newMember.pids = [target.mid];
+                    const mother = familyData.find(m => m.id == target.mid);
+                    if (mother) {
+                        if (!mother.pids) mother.pids = [];
+                        if (!mother.pids.includes(newId)) mother.pids.push(newId);
+                    }
+                }
                 target.fid = newId;
                 familyData.push(newMember);
+
             } else if (relType === "mother") {
                 newMember.gender = "female";
+                if (target.fid) {
+                    newMember.pids = [target.fid];
+                    const father = familyData.find(m => m.id == target.fid);
+                    if (father) {
+                        if (!father.pids) father.pids = [];
+                        if (!father.pids.includes(newId)) father.pids.push(newId);
+                    }
+                }
                 target.mid = newId;
                 familyData.push(newMember);
             }
 
             closeAddModal();
-            renderD3FamilyTree();
+            family.load(filterTreeData(currentFilterMode));
             saveToStorage();
         }
 
-        // Edit Relative
+        /* --- EDIT DETAILS MODAL --- */
         function openEditModal(nodeId) {
             if (!canEdit()) return;
             selectedNodeId = nodeId;
@@ -1884,16 +2281,20 @@
             document.getElementById('editPersonBirth').value = person.birthYear || "";
             document.getElementById('editPersonDeath').value = person.deathYear || "";
             document.getElementById('editPersonPlace').value = person.place || "";
-
+            
             const photoVal = person.photo || "";
             document.getElementById('editPhotoUrl').value = photoVal;
-            document.getElementById('editPhotoPreview').src = photoVal || "https://via.placeholder.com/150/334155/f8fafc?text=Avatar";
+            document.getElementById('editPhotoPreview').src = photoVal ? photoVal : "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%2364748b'><circle cx='32' cy='24' r='14'/><path d='M10 58c0-12 10-20 22-20s22 8 22 20z'/></svg>";
+            document.getElementById('editUploadStatus').innerText = photoVal ? "Current Photo Set" : "Gallery / Files";
+            document.getElementById('editUploadStatus').style.color = "#a0a0b8";
+
             document.getElementById('editPersonNotes').value = person.notes || "";
             document.getElementById('editModal').style.display = "flex";
         }
 
         function closeEditModal() {
             document.getElementById('editModal').style.display = "none";
+            selectedNodeId = null;
         }
 
         function savePersonEdits() {
@@ -1907,31 +2308,40 @@
             const person = familyData.find(m => m.id == selectedNodeId);
             if (!person) return;
 
+            const isDeceased = document.getElementById('editPersonDeceased').value === "true";
+
             person.name = name;
             person.gender = document.getElementById('editPersonGender').value;
-            person.isDeceased = document.getElementById('editPersonDeceased').value === "true";
+            person.isDeceased = isDeceased;
             person.birthYear = document.getElementById('editPersonBirth').value.trim();
-            person.deathYear = person.isDeceased ? document.getElementById('editPersonDeath').value.trim() : "";
+            person.deathYear = isDeceased ? document.getElementById('editPersonDeath').value.trim() : "";
             person.place = document.getElementById('editPersonPlace').value.trim();
             person.photo = document.getElementById('editPhotoUrl').value.trim();
             person.notes = document.getElementById('editPersonNotes').value.trim();
 
+            syncNodeTags(person);
+
             closeEditModal();
-            renderD3FamilyTree();
+            family.load(filterTreeData(currentFilterMode));
             saveToStorage();
         }
 
-        // Export Modal
+        // --- 12. CLIENT-SIDE EXPORT & NATIVE PRINT ---
         function openExportModal() {
             document.getElementById("exportModal").style.display = "flex";
         }
+
         function closeExportModal() {
             document.getElementById("exportModal").style.display = "none";
         }
 
         function triggerPrintPDF() {
             closeExportModal();
-            fitTreeToScreen();
+
+            if (family) {
+                family.fit();
+            }
+
             setTimeout(() => {
                 if (window.AndroidBridge && typeof window.AndroidBridge.printTree === "function") {
                     window.AndroidBridge.printTree();
@@ -1943,17 +2353,26 @@
 
         function triggerExportSVG() {
             closeExportModal();
+            showToast("Exporting Vector Chart...");
+
             try {
                 const svgEl = document.querySelector("#tree svg");
-                if (!svgEl) return;
+                if (!svgEl) {
+                    alert("Tree canvas not found.");
+                    return;
+                }
+
                 const serializer = new XMLSerializer();
                 let svgSource = serializer.serializeToString(svgEl);
+
                 if (!svgSource.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
                     svgSource = svgSource.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
                 }
+
                 const blob = new Blob([svgSource], { type: "image/svg+xml;charset=utf-8" });
                 const url = URL.createObjectURL(blob);
                 const fileName = (document.getElementById("treeTitleHeader").innerText || "family_tree").replace(/\s+/g, '_') + ".svg";
+
                 const a = document.createElement("a");
                 a.href = url;
                 a.download = fileName;
@@ -1963,13 +2382,14 @@
                 URL.revokeObjectURL(url);
                 showToast("Vector SVG Downloaded");
             } catch (err) {
+                console.error("Vector export error:", err);
                 alert("Vector export error: " + err.message);
             }
         }
 
+        // Trigger unlock dialog immediately on startup / cold launch
         window.addEventListener("DOMContentLoaded", () => {
             checkPasscodeAuthorization();
-            renderD3FamilyTree();
         });
         checkPasscodeAuthorization();
     </script>
