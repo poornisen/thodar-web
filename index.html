@@ -527,8 +527,11 @@
         <!-- Row 3: Admin & Tree Owner Management Controls -->
         <div id="adminControls">
             <span class="admin-badge">Admin</span>
-            <button class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
-            <button class="admin-btn" onclick="signOutAdmin()">Sign Out</button>
+            <button id="adminPendingBtn" class="admin-btn" style="background: rgba(34, 197, 94, 0.18); border-color: rgba(34, 197, 94, 0.45); color: #4ade80; display: none;" onclick="openPendingApprovalsModal()" title="Review Pending Requests">
+                📋 Requests <span id="pendingCountBadge" style="display: none; background: #ef4444; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; margin-left: 3px;">0</span>
+            </button>
+            <button id="managePasscodeBtn" class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
+
         </div>
 
         <div id="searchDropdown"></div>
@@ -564,10 +567,46 @@
         </div>
     </div>
 
+        <!-- Custom In-App Alert Modal (Replaces browser "file://" alert) -->
+    <div id="customAlertModal" class="modal-overlay" style="display: none; z-index: 200000;">
+        <div class="modal-box" style="text-align: center; max-width: 360px;">
+            <div id="customAlertIcon" style="font-size: 36px; margin-bottom: 10px;">🎉</div>
+            <h3 id="customAlertTitle" style="margin-bottom: 8px; color: #38bdf8;">Thodar</h3>
+            <div id="customAlertMessage" style="font-size: 13px; color: #d1d1e0; line-height: 1.6; white-space: pre-line; margin-bottom: 20px; text-align: left; background: #181824; padding: 12px 14px; border-radius: 8px; border: 1px solid #37374d;"></div>
+            <div class="modal-actions" style="justify-content: center; margin-top: 0;">
+                <button class="btn btn-save" style="width: 100%;" onclick="closeCustomAlert()">OK</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- In-App Admin Approvals Management Modal -->
+    <div id="pendingApprovalsModal" class="modal-overlay" style="display: none; z-index: 200000;">
+        <div class="modal-box" style="max-width: 440px; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+                    <span>📋</span> Tree Requests
+                </h3>
+                <button class="btn btn-cancel" style="padding: 4px 10px; font-size: 12px;" onclick="closePendingApprovalsModal()">✕</button>
+            </div>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px;">
+                Review and activate requested lineage charts without opening Firebase Console.
+            </p>
+
+            <div id="pendingListContainer" style="max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                <div style="text-align: center; color: #64748b; padding: 20px; font-size: 13px;">Loading requests...</div>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between; align-items: center; margin-top: 0;">
+                <button class="btn btn-cancel" style="font-size: 12px;" onclick="fetchPendingRequests()">🔄 Refresh</button>
+                <button class="btn btn-cancel" onclick="closePendingApprovalsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 1. Passcode & Tree Code Unlock Gatekeeper -->
     <div id="passcodeModal" class="modal-overlay" style="display: none;">
         <div class="modal-box" style="text-align: center;">
-            <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+            <div style="font-size: 32px; margin-bottom: 8px; cursor: pointer; user-select: none;" onclick="handleSecretTap()" title="Admin Tap">🔒</div>
             <h3 style="margin-bottom: 6px;">Unlock Family Lineage</h3>
             <p style="font-size: 13px; color: #a0a0b8; margin-top: 0; margin-bottom: 18px;">
                 Enter your 6-Digit Tree Code and PIN to access this family chart.
@@ -584,6 +623,7 @@
             <div class="modal-actions" style="flex-direction: column; gap: 8px;">
                 <button class="btn btn-save" style="width: 100%;" onclick="verifyPasscode()">Unlock Tree</button>
                 <button class="btn btn-cancel" style="width: 100%; font-size: 12px;" onclick="openRequestTreeModal()">➕ Request a New Family Tree</button>
+                <button type="button" style="background: transparent; border: none; color: #64748b; font-size: 11px; cursor: pointer; padding: 4px; margin-top: 4px;" onclick="openAuthModal()">Administrator Login ⚙️</button>
             </div>
         </div>
     </div>
@@ -630,9 +670,12 @@
                 <input type="text" id="manageViewerPasscodeField" placeholder="e.g. 1234" />
                 <span style="font-size: 11px; color: #7b7b94; display:block; margin-top:4px;">Relatives with this PIN cannot edit or delete relatives.</span>
             </div>
-            <div style="margin-top: 14px;">
-                <button type="button" class="btn btn-cancel" style="width:100%; font-size:12px;" onclick="copyFamilyShareDetails()">
-                    📋 Copy Share Link & Viewer PIN
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+                <button type="button" class="btn" style="width: 100%; font-size: 13px; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="shareViaWhatsApp()">
+                    💬 Share via WhatsApp
+                </button>
+                <button type="button" class="btn btn-cancel" style="width: 100%; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="copyFamilyShareDetails()">
+                    📋 Copy Tree Code & Viewer PIN
                 </button>
             </div>
             <div class="modal-actions" style="margin-top: 18px;">
@@ -670,7 +713,7 @@
     </div>
 
     <!-- 4. Admin Authentication Modal (Stealth 7-Tap) -->
-    <div id="authModal" class="modal-overlay">
+    <div id="authModal" class="modal-overlay" style="z-index: 300000;">
         <div class="modal-box">
             <h3 id="authTitle">Admin Authentication</h3>
             <div class="form-group">
@@ -681,10 +724,7 @@
                 <label>Password</label>
                 <input type="password" id="authPassword" placeholder="••••••••" />
             </div>
-            <div class="form-group" style="margin-top: 14px; border-top: 1px solid #37374d; padding-top: 12px;">
-                <label style="color: #4da3ff;">Set / Update Family Passcode</label>
-                <input type="text" id="adminNewPasscode" placeholder="e.g. 1938" />
-            </div>
+           
             <div id="authError" style="display: none; color: #ff6b6b; font-size: 13px; margin-bottom: 12px;"></div>
             <div class="modal-actions" style="justify-content: space-between;">
                 <button class="btn btn-cancel" onclick="closeAuthModal()">Close</button>
@@ -866,6 +906,25 @@
 
         const defaultSeedData = [];
 
+                // Custom In-App Modal Dialog System (Removes browser "file://" alert boxes)
+        let customAlertCallback = null;
+        function showCustomAlert(title, message, icon = "ℹ️", callback = null) {
+            document.getElementById("customAlertTitle").innerText = title;
+            document.getElementById("customAlertMessage").innerText = message;
+            document.getElementById("customAlertIcon").innerText = icon;
+            customAlertCallback = callback;
+            document.getElementById("customAlertModal").style.display = "flex";
+        }
+
+        function closeCustomAlert() {
+            document.getElementById("customAlertModal").style.display = "none";
+            if (typeof customAlertCallback === "function") {
+                const cb = customAlertCallback;
+                customAlertCallback = null;
+                cb();
+            }
+        }
+
         function showToast(msg) {
             const toast = document.getElementById("toast");
             toast.innerText = msg;
@@ -914,16 +973,69 @@
         function updateControlBar() {
             const adminControls = document.getElementById("adminControls");
             const badge = adminControls ? adminControls.querySelector(".admin-badge") : null;
+            const pendingBtn = document.getElementById("adminPendingBtn");
+            const passcodeBtn = document.getElementById("managePasscodeBtn");
 
-            if (canEdit()) {
+            if (isAdmin) {
+                // --- 1. SUPER-ADMIN MODE ---
                 if (adminControls) adminControls.style.display = "flex";
-                if (badge) badge.innerText = isAdmin ? "Super-Admin" : "Tree Owner";
+                if (badge) {
+                    badge.innerText = "Super-Admin";
+                    badge.style.background = "rgba(0, 123, 255, 0.2)";
+                    badge.style.color = "#4da3ff";
+                    badge.style.borderColor = "rgba(0, 123, 255, 0.4)";
+                }
+                // Super-Admin reviews requests, but has no tree-specific passcode to manage
+                if (pendingBtn) pendingBtn.style.display = "inline-flex";
+                if (passcodeBtn) passcodeBtn.style.display = "none";
+
+            } else if (isOwnerSession) {
+                // --- 2. TREE OWNER MODE ---
+                if (adminControls) adminControls.style.display = "flex";
+                if (badge) {
+                    badge.innerText = "Tree Owner";
+                    badge.style.background = "rgba(22, 163, 74, 0.2)";
+                    badge.style.color = "#4ade80";
+                    badge.style.borderColor = "rgba(22, 163, 74, 0.4)";
+                }
+                // Owner manages their family PINs, but NEVER sees the platform requests queue
+                if (pendingBtn) pendingBtn.style.display = "none";
+                if (passcodeBtn) passcodeBtn.style.display = "inline-flex";
+
             } else {
+                // --- 3. VIEWER MODE ---
+                // Completely hide the administration toolbar from viewers
                 if (adminControls) adminControls.style.display = "none";
+                if (pendingBtn) pendingBtn.style.display = "none";
+                if (passcodeBtn) passcodeBtn.style.display = "none";
             }
         }
 
         function checkPasscodeAuthorization() {
+            // Admin can access the system at any time without entering any tree code or PIN
+            if (isAdmin) {
+                document.getElementById("passcodeModal").style.display = "none";
+                updateControlBar();
+                if (!TENANT_ID) {
+                    const container = document.getElementById("tree");
+                    if (container && (!familyData || familyData.length === 0)) {
+                        container.innerHTML = `
+                            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; text-align:center; padding:24px; box-sizing:border-box;">
+                                <div style="font-size:48px; margin-bottom:12px;">👑</div>
+                                <h3 style="color:#ffffff; font-size:20px; margin:0 0 8px;">Super-Admin Control Panel</h3>
+                                <p style="max-width:380px; font-size:13px; line-height:1.6; color:#94a3b8; margin:0 0 18px;">
+                                    You are authenticated as Platform Administrator. You can review pending registrations or switch into any family tree.
+                                </p>
+                                <button class="btn btn-save" style="background:#16a34a; padding:10px 18px; font-size:13px;" onclick="openPendingApprovalsModal()">
+                                    📋 Review Pending Requests
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+                return true;
+            }
+
             if (!TENANT_ID) {
                 const container = document.getElementById("tree");
                 if (container) container.innerHTML = "";
@@ -938,7 +1050,7 @@
                 isOwnerSession = (sessionRole === "owner");
             }
 
-            if (isAdmin || isPasscodeUnlocked) {
+            if (isPasscodeUnlocked) {
                 document.getElementById("passcodeModal").style.display = "none";
                 updateControlBar();
                 return true;
@@ -981,6 +1093,7 @@
                 .then(result => {
                     const { token, role, treeName } = result.data;
                     return auth.signInWithCustomToken(token).then(() => {
+                        isAdmin = false; // Relinquish admin mode when unlocking a specific tree session
                         switchActiveTree(enteredTreeId, role === "owner");
                         if (treeName) {
                             document.getElementById("treeTitleHeader").innerText = treeName;
@@ -1082,16 +1195,65 @@
             });
         }
 
-        function copyFamilyShareDetails() {
-            const viewerCode = document.getElementById("manageViewerPasscodeField").value.trim() || cloudViewerPasscode;
-            const shareUrl = `${window.location.origin}${window.location.pathname}?tree=${TENANT_ID}`;
-            const msg = `🌿 View our family tree on Thodar:\nLink: ${shareUrl}\nTree Code: ${TENANT_ID}\nViewer PIN: ${viewerCode || "(None set yet)"}`;
+        function getFamilyShareMessage(isWhatsApp = false) {
+            const treeName = document.getElementById("treeTitleHeader").innerText || "Family Tree";
+            const viewerCode = document.getElementById("manageViewerPasscodeField").value.trim() || cloudViewerPasscode || "(Not Set)";
 
-            navigator.clipboard.writeText(msg)
-                .then(() => showToast("Share Link & Code Copied!"))
-                .catch(() => alert(msg));
+            if (isWhatsApp) {
+                return `🌿 *${treeName}* on Thodar\n\n📌 *Tree Code:* ${TENANT_ID}\n🔑 *Viewer PIN:* ${viewerCode}\n\nEnter this Tree Code and Viewer PIN in the Thodar app to view our family lineage chart.`;
+            }
+            return `🌿 ${treeName} on Thodar\n\nTree Code: ${TENANT_ID}\nViewer PIN: ${viewerCode}\n\nEnter this Tree Code and Viewer PIN in the Thodar app to view our family lineage chart.`;
         }
 
+        function copyFamilyShareDetails() {
+            const msg = getFamilyShareMessage(false);
+
+            if (window.AndroidBridge && typeof window.AndroidBridge.copyToClipboard === "function") {
+                window.AndroidBridge.copyToClipboard(msg);
+                showToast("Tree Code & Viewer PIN Copied! ✓");
+                return;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(msg)
+                    .then(() => showToast("Tree Code & Viewer PIN Copied! ✓"))
+                    .catch(() => fallbackCopyText(msg));
+            } else {
+                fallbackCopyText(msg);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand("copy");
+                showToast("Tree Code & Viewer PIN Copied! ✓");
+            } catch (e) {
+                alert(text);
+            }
+            document.body.removeChild(ta);
+        }
+
+        function shareViaWhatsApp() {
+            const msg = getFamilyShareMessage(true);
+
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareWhatsApp === "function") {
+                window.AndroidBridge.shareWhatsApp(msg);
+                return;
+            }
+            if (window.AndroidBridge && typeof window.AndroidBridge.shareText === "function") {
+                window.AndroidBridge.shareText(msg);
+                return;
+            }
+
+            const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(msg)}`;
+            window.location.href = whatsappUrl;
+        }
         // --- REQUEST A NEW TREE MODAL ---
         function openRequestTreeModal() {
             document.getElementById("passcodeModal").style.display = "none";
@@ -1106,15 +1268,9 @@
             document.getElementById("requestTreeModal").style.display = "none";
         }
 
-        async function generateUnique6DigitCode() {
-            for (let attempts = 0; attempts < 10; attempts++) {
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
-                const checkDoc = await db.collection("trees").doc(code).get();
-                if (!checkDoc.exists) {
-                    return code;
-                }
-            }
-            return Date.now().toString().slice(-6);
+        function generateUnique6DigitCode() {
+            // Generate random 6-digit code without triggering unauthorized client reads
+            return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
         async function submitTreeRequest() {
@@ -1147,8 +1303,12 @@
                 });
 
                 closeRequestTreeModal();
-                alert(`Tree Requested Successfully! 🎉\n\nYour Assigned 6-Digit Tree Code is: ${assignedCode}\nLineage Name: ${treeName}\n\nYour registration has been submitted for administrator activation. Keep this 6-Digit code safe!`);
-                window.location.search = `?tree=${assignedCode}`;
+                showCustomAlert(
+                    "Tree Requested Successfully!",
+                    `Your Assigned 6-Digit Tree Code: ${assignedCode}\nLineage Name: ${treeName}\n\nYour registration has been submitted for administrator activation. Keep this 6-Digit code safe!`,
+                    "🎉",
+                    () => { window.location.search = `?tree=${assignedCode}`; }
+                );
             } catch (err) {
                 btn.disabled = false;
                 btn.innerText = "Submit Request";
@@ -1158,23 +1318,34 @@
         }
 
         // --- 3. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
-        function handleExitSession() {
-            isPasscodeUnlocked = false;
-            isOwnerSession = false;
-            // Clear screen-rotation session on deliberate lock/exit
-            sessionStorage.removeItem("thodar_session_" + TENANT_ID);
+        // --- GLOBAL UNIFIED EXIT & SIGN-OUT HANDLER ---
+function handleExitSession() {
+    // 1. Relinquish all active privileges
+    isAdmin = false;
+    isOwnerSession = false;
+    isPasscodeUnlocked = false;
 
-            auth.signOut().catch(() => {});
+    // 2. Clear transient credentials from storage
+    if (TENANT_ID) {
+        sessionStorage.removeItem("thodar_session_" + TENANT_ID);
+    }
+    sessionStorage.clear();
 
-            updateControlBar();
-            openUnlockDialog();
-            showToast("Session Locked");
+    // 3. Complete Firebase Sign Out (revokes admin & custom owner tokens)
+    auth.signOut().catch((err) => {
+        console.warn("Sign-out warning:", err);
+    });
 
-            if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
-                window.AndroidBridge.closeApp();
-            }
-        }
+    // 4. Reset UI bars & show lock gatekeeper
+    updateControlBar();
+    openUnlockDialog();
+    showToast("Session Signed Out & Locked");
 
+    // 5. Close native Android container if running inside the app
+    if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
+        window.AndroidBridge.closeApp();
+    }
+}
         // --- 4. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
         function getChildrenCount(personId) {
             const person = familyData.find(m => m.id == personId);
@@ -1809,27 +1980,137 @@
         }
 
         // --- 8. AUTHENTICATION & ADMIN CONTROLS ---
+                // --- IN-APP ADMIN APPROVAL PORTAL ---
+        function checkAdminPendingBadge() {
+            if (!isAdmin) return;
+            const btn = document.getElementById("adminPendingBtn");
+            const badge = document.getElementById("pendingCountBadge");
+            if (btn) btn.style.display = "inline-flex";
+
+            const getPendingTrees = functions.httpsCallable("getPendingTrees");
+            getPendingTrees().then(res => {
+                const list = (res.data && res.data.trees) ? res.data.trees : [];
+                if (badge) {
+                    if (list.length > 0) {
+                        badge.innerText = list.length;
+                        badge.style.display = "inline-block";
+                    } else {
+                        badge.style.display = "none";
+                    }
+                }
+            }).catch(err => console.warn("Pending badge check:", err));
+        }
+
+        function openPendingApprovalsModal() {
+            document.getElementById("pendingApprovalsModal").style.display = "flex";
+            fetchPendingRequests();
+        }
+
+        function closePendingApprovalsModal() {
+            document.getElementById("pendingApprovalsModal").style.display = "none";
+        }
+
+        function fetchPendingRequests() {
+            const container = document.getElementById("pendingListContainer");
+            container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 24px; font-size: 13px;">Scanning pending trees...</div>';
+
+            const getPendingTrees = functions.httpsCallable("getPendingTrees");
+            getPendingTrees().then(res => {
+                const list = (res.data && res.data.trees) ? res.data.trees : [];
+                const badge = document.getElementById("pendingCountBadge");
+                if (badge) {
+                    badge.innerText = list.length;
+                    badge.style.display = list.length > 0 ? "inline-block" : "none";
+                }
+
+                if (list.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 30px 10px; color: #94a3b8;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">✨</div>
+                            <div style="font-weight: 600; color: #f8fafc; margin-bottom: 4px;">No Pending Requests</div>
+                            <div style="font-size: 12px; color: #64748b;">All requested family trees have been approved.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = list.map(item => `
+                    <div style="background: #181824; border: 1px solid #334155; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <div style="font-weight: 700; color: #f8fafc; font-size: 14px;">${item.treeName}</div>
+                                <div style="font-size: 12px; color: #38bdf8; font-family: monospace; letter-spacing: 0.5px;">Code: ${item.tenantId}</div>
+                            </div>
+                            <span style="font-size: 10px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); padding: 2px 7px; border-radius: 6px; font-weight: 600;">Pending</span>
+                        </div>
+                        <div style="font-size: 12px; color: #94a3b8;">Email: <span style="color: #cbd5e1;">${item.ownerEmail}</span></div>
+                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                            <button class="btn btn-save" style="flex: 1; padding: 7px 12px; font-size: 12px; background: #16a34a;" onclick="approveTreeFromApp('${item.tenantId}', this)">
+                                ✓ Approve & Activate
+                            </button>
+                        </div>
+                    </div>
+                `).join("");
+            }).catch(err => {
+                container.innerHTML = `<div style="color: #ef4444; text-align: center; padding: 16px; font-size: 13px;">Error: ${err.message || err}</div>`;
+            });
+        }
+
+        function approveTreeFromApp(tenantId, btnEl) {
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.innerText = "Activating...";
+            }
+
+            const approveTree = functions.httpsCallable("approveTreeRegistration");
+            approveTree({ tenantId: tenantId }).then(() => {
+                showToast(`Tree ${tenantId} Approved! ✓`);
+                fetchPendingRequests();
+            }).catch(err => {
+                alert("Failed to approve: " + (err.message || err));
+                if (btnEl) {
+                    btnEl.disabled = false;
+                    btnEl.innerText = "✓ Approve & Activate";
+                }
+            });
+        }
+
         auth.onAuthStateChanged(function(user) {
             currentUser = user;
             const adminControls = document.getElementById("adminControls");
 
             if (user) {
                 isAdmin = true;
-                adminControls.style.display = "flex";
+                if (adminControls) adminControls.style.display = "flex";
+                document.getElementById("passcodeModal").style.display = "none";
                 showToast("Admin Mode Activated");
+
+                // Isolate Super Admin workspace: detach previously viewed family tree
+                if (treeUnsubscribe) {
+                    treeUnsubscribe();
+                    treeUnsubscribe = null;
+                }
+                treeDocRef = null;
+                TENANT_ID = "";
+                familyData = [];
+                document.getElementById("treeTitleHeader").innerText = "Platform Management";
+
+                renderAdminDashboard();
+                checkAdminPendingBadge();
             } else {
                 isAdmin = false;
-                adminControls.style.display = "none";
+                if (adminControls) adminControls.style.display = "none";
+                const pendingBtn = document.getElementById("adminPendingBtn");
+                if (pendingBtn) pendingBtn.style.display = "none";
+                initFamilyTree();
+                checkPasscodeAuthorization();
             }
-            initFamilyTree();
-            checkPasscodeAuthorization();
         });
 
         function openAuthModal() {
             document.getElementById("authError").style.display = "none";
             document.getElementById("authEmail").value = "";
             document.getElementById("authPassword").value = "";
-            document.getElementById("adminNewPasscode").value = "";
             document.getElementById("authModal").style.display = "flex";
         }
 
@@ -1838,36 +2119,62 @@
         }
 
         function performAuth() {
-            const email = document.getElementById("authEmail").value.trim();
-            const password = document.getElementById("authPassword").value.trim();
-            const newCode = document.getElementById("adminNewPasscode").value.trim();
-            const errDiv = document.getElementById("authError");
+    				const email = document.getElementById("authEmail").value.trim();
+    				const password = document.getElementById("authPassword").value.trim();
+    				const errDiv = document.getElementById("authError");
 
-            if (!email || !password) {
-                errDiv.innerText = "Please provide both email and password.";
-                errDiv.style.display = "block";
-                return;
-            }
+    				if (!email || !password) {
+        				errDiv.innerText = "Please provide both email and password.";
+        				errDiv.style.display = "block";
+        				return;
+    					}
 
-            auth.signInWithEmailAndPassword(email, password)
-                .then(() => {
-                    closeAuthModal();
-                    if (newCode) {
-                        cloudPasscode = newCode;
-                        treeDocRef.set({ passcode: newCode }, { merge: true });
-                    }
-                    if (window.location.hash === "#admin") {
-                        history.replaceState(null, null, ' ');
-                    }
-                })
-                .catch(err => {
-                    errDiv.innerText = err.message;
-                    errDiv.style.display = "block";
-                });
+    				auth.signInWithEmailAndPassword(email, password)
+        				.then(() => {
+            				closeAuthModal();
+            				document.getElementById("passcodeModal").style.display = "none";
+            				if (window.location.hash === "#admin") {
+                			history.replaceState(null, null, ' ');
+            				}
+        				})
+        			.catch(err => {
+            			errDiv.innerText = err.message;
+            			errDiv.style.display = "block";
+        				});
+}
+
+
+        function renderAdminDashboard() {
+            const container = document.getElementById("tree");
+            if (!container) return;
+            container.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8; text-align:center; padding:24px; box-sizing:border-box;">
+                    <div style="font-size:52px; margin-bottom:12px;">👑</div>
+                    <h3 style="color:#ffffff; font-size:22px; margin:0 0 8px;">Super-Admin Control Panel</h3>
+                    <p style="max-width:440px; font-size:14px; line-height:1.6; color:#94a3b8; margin:0 0 24px;">
+                        Authenticated as Platform Administrator. The canvas is cleared. Use the controls above to manage tree requests or switch into any family chart.
+                    </p>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+                        <button class="btn btn-save" style="background:#16a34a; padding:11px 20px; font-size:13px;" onclick="openPendingApprovalsModal()">
+                            📋 Review Pending Requests
+                        </button>
+                        <button class="btn btn-save" style="background:rgba(56, 189, 248, 0.2); border:1px solid rgba(56, 189, 248, 0.45); color:#38bdf8; padding:11px 20px; font-size:13px;" onclick="openUnlockDialog()">
+                            🔄 Switch / Inspect a Tree
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         function signOutAdmin() {
             auth.signOut().then(() => {
+                isAdmin = false;
+                TENANT_ID = "";
+                familyData = [];
+                localStorage.removeItem("thodar_active_tree");
+                document.getElementById("treeTitleHeader").innerText = "Thodar Family Tree";
+                updateControlBar();
+                openUnlockDialog();
                 showToast("Returned to Viewer Mode");
             });
         }
