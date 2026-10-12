@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Thodar Family Tree</title>
 
     <!-- Firebase SDKs -->
@@ -18,10 +20,13 @@
     <style>
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         html, body {
             width: 100%;
             height: 100%;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height adapting to Safari's collapsing URL & toolbars */
             margin: 0;
             padding: 0;
             overflow: hidden;
@@ -29,6 +34,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-user-select: none;
             user-select: none;
+            -webkit-touch-callout: none; /* Prevents default iOS Safari long-press callouts */
             display: flex;
             flex-direction: column;
         }
@@ -37,6 +43,10 @@
             background: rgba(22, 22, 31, 0.98);
             border-bottom: 1px solid #2d2d3f;
             padding: 8px 12px;
+            /* Safe area padding for notch/Dynamic Island on iPhone */
+            padding-top: calc(8px + env(safe-area-inset-top, 0px));
+            padding-left: calc(12px + env(safe-area-inset-left, 0px));
+            padding-right: calc(12px + env(safe-area-inset-right, 0px));
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -50,6 +60,7 @@
             height: 100%;
             position: relative;
             overflow: hidden;
+            touch-action: none; /* Smooth multi-touch pan & pinch gestures in mobile Safari */
         }
 
         /* Print Media Styles: hides UI controls, formats for paper */
@@ -163,7 +174,7 @@
             background: transparent;
             border: none;
             color: #ffffff;
-            font-size: 14px;
+            font-size: 16px; /* 16px prevents iOS Safari from automatically zooming in on input focus */
             outline: none;
             padding: 6px 6px;
             min-width: 80px;
@@ -183,6 +194,8 @@
             outline: none;
             cursor: pointer;
             max-width: 140px;
+            -webkit-appearance: none; /* Normalizes Safari native select styling */
+            appearance: none;
         }
 
         #adminControls {
@@ -225,6 +238,7 @@
             border-radius: 10px;
             max-height: 220px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             z-index: 1001;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
         }
@@ -257,7 +271,7 @@
             position: fixed;
             z-index: 10000;
             left: 50%;
-            bottom: 30px;
+            bottom: calc(30px + env(safe-area-inset-bottom, 0px));
             transform: translateX(-50%);
             font-size: 14px;
             font-weight: 500;
@@ -273,8 +287,8 @@
         /* Floating Collapse/Expand Button (Bottom Right) */
         #collapseDock {
             position: fixed;
-            right: 14px;
-            bottom: 20px;
+            right: calc(14px + env(safe-area-inset-right, 0px));
+            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
             z-index: 999;
         }
         .collapse-btn {
@@ -291,6 +305,7 @@
             cursor: pointer;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         .collapse-btn:active {
             background: #007bff;
@@ -305,11 +320,15 @@
             left: 0;
             width: 100%;
             height: 100%;
+            height: 100dvh;
             background: rgba(0, 0, 0, 0.85);
             z-index: 100000;
             align-items: center;
             justify-content: center;
             padding: 16px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
         }
         .modal-box {
             background: #232332;
@@ -317,8 +336,10 @@
             border-radius: 14px;
             width: 100%;
             max-width: 380px;
-            max-height: 90vh;
+            max-height: 85vh;
+            max-height: 85dvh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             padding: 22px;
             box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
             color: #ffffff;
@@ -347,7 +368,7 @@
             background: #181824;
             border: 1px solid #3b3b50;
             color: #ffffff;
-            font-size: 14px;
+            font-size: 16px; /* Prevents auto-zoom in Safari on iPhone */
             outline: none;
         }
         .form-row {
@@ -486,7 +507,7 @@
             rx: 6px;
             cursor: pointer;
         }
-</style>
+    </style>
 </head>
 <body>
 
@@ -531,7 +552,6 @@
                 📋 Requests <span id="pendingCountBadge" style="display: none; background: #ef4444; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; margin-left: 3px;">0</span>
             </button>
             <button id="managePasscodeBtn" class="admin-btn" onclick="openPasscodeManager()" title="Manage Passcode">🔑 Passcode</button>
-
         </div>
 
         <div id="searchDropdown"></div>
@@ -548,8 +568,8 @@
         </button>
     </div>
 
-        <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
-    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0f172a; color:#f8fafc; z-index:99990; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
+    <!-- Gatekeeper Overlay (Approval Gate & Not Found Screen) -->
+    <div id="gatekeeperOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; height:100dvh; background:#0f172a; color:#f8fafc; z-index:99990; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
         <div style="max-width:440px; background:#1e293b; padding:32px; border-radius:14px; border:1px solid #334155; box-shadow:0 12px 36px rgba(0,0,0,0.65);">
             <div id="gatekeeperIcon" style="font-size:46px; margin-bottom:14px;">⏳</div>
             <h2 id="gatekeeperTitle" style="margin:0 0 10px; font-size:20px; color:#ffffff;">Under Review</h2>
@@ -567,7 +587,7 @@
         </div>
     </div>
 
-        <!-- Custom In-App Alert Modal (Replaces browser "file://" alert) -->
+    <!-- Custom In-App Alert Modal (Replaces browser "file://" alert) -->
     <div id="customAlertModal" class="modal-overlay" style="display: none; z-index: 200000;">
         <div class="modal-box" style="text-align: center; max-width: 360px;">
             <div id="customAlertIcon" style="font-size: 36px; margin-bottom: 10px;">🎉</div>
@@ -579,7 +599,7 @@
         </div>
     </div>
 
-        <!-- In-App Admin Approvals Management Modal -->
+    <!-- In-App Admin Approvals Management Modal -->
     <div id="pendingApprovalsModal" class="modal-overlay" style="display: none; z-index: 200000;">
         <div class="modal-box" style="max-width: 440px; width: 100%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -623,7 +643,7 @@
             <div class="modal-actions" style="flex-direction: column; gap: 8px;">
                 <button class="btn btn-save" style="width: 100%;" onclick="verifyPasscode()">Unlock Tree</button>
                 <button class="btn btn-cancel" style="width: 100%; font-size: 12px;" onclick="openRequestTreeModal()">➕ Request a New Family Tree</button>
-                <button type="button" style="background: transparent; border: none; color: #64748b; font-size: 11px; cursor: pointer; padding: 4px; margin-top: 4px;" onclick="openAuthModal()">Administrator Login ⚙️</button>
+
             </div>
         </div>
     </div>
@@ -906,7 +926,7 @@
 
         const defaultSeedData = [];
 
-                // Custom In-App Modal Dialog System (Removes browser "file://" alert boxes)
+        // Custom In-App Modal Dialog System (Removes browser "file://" alert boxes)
         let customAlertCallback = null;
         function showCustomAlert(title, message, icon = "ℹ️", callback = null) {
             document.getElementById("customAlertTitle").innerText = title;
@@ -1254,6 +1274,7 @@
             const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(msg)}`;
             window.location.href = whatsappUrl;
         }
+
         // --- REQUEST A NEW TREE MODAL ---
         function openRequestTreeModal() {
             document.getElementById("passcodeModal").style.display = "none";
@@ -1264,12 +1285,12 @@
             document.getElementById("requestTreeModal").style.display = "flex";
         }
 
-        function closeRequestTreeModal() {
+       function closeRequestTreeModal() {
             document.getElementById("requestTreeModal").style.display = "none";
+            openUnlockDialog();
         }
 
         function generateUnique6DigitCode() {
-            // Generate random 6-digit code without triggering unauthorized client reads
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
@@ -1317,35 +1338,35 @@
             }
         }
 
-        // --- 3. GLOBAL EXIT / CLOSE / LOCK HANDLER ---
-        // --- GLOBAL UNIFIED EXIT & SIGN-OUT HANDLER ---
-function handleExitSession() {
-    // 1. Relinquish all active privileges
-    isAdmin = false;
-    isOwnerSession = false;
-    isPasscodeUnlocked = false;
+        // --- 3. GLOBAL UNIFIED EXIT & SIGN-OUT HANDLER ---
+        function handleExitSession() {
+            // 1. Relinquish all active privileges
+            isAdmin = false;
+            isOwnerSession = false;
+            isPasscodeUnlocked = false;
 
-    // 2. Clear transient credentials from storage
-    if (TENANT_ID) {
-        sessionStorage.removeItem("thodar_session_" + TENANT_ID);
-    }
-    sessionStorage.clear();
+            // 2. Clear transient credentials from storage
+            if (TENANT_ID) {
+                sessionStorage.removeItem("thodar_session_" + TENANT_ID);
+            }
+            sessionStorage.clear();
 
-    // 3. Complete Firebase Sign Out (revokes admin & custom owner tokens)
-    auth.signOut().catch((err) => {
-        console.warn("Sign-out warning:", err);
-    });
+            // 3. Complete Firebase Sign Out (revokes admin & custom owner tokens)
+            auth.signOut().catch((err) => {
+                console.warn("Sign-out warning:", err);
+            });
 
-    // 4. Reset UI bars & show lock gatekeeper
-    updateControlBar();
-    openUnlockDialog();
-    showToast("Session Signed Out & Locked");
+            // 4. Reset UI bars & show lock gatekeeper
+            updateControlBar();
+            openUnlockDialog();
+            showToast("Session Signed Out & Locked");
 
-    // 5. Close native Android container if running inside the app
-    if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
-        window.AndroidBridge.closeApp();
-    }
-}
+            // 5. Close native Android container if running inside the app
+            if (window.AndroidBridge && typeof window.AndroidBridge.closeApp === "function") {
+                window.AndroidBridge.closeApp();
+            }
+        }
+
         // --- 4. DYNAMIC LINEAGE PERSPECTIVE FILTERS + COLLAPSIBLE SUBTREES ---
         function getChildrenCount(personId) {
             const person = familyData.find(m => m.id == personId);
@@ -1494,7 +1515,7 @@ function handleExitSession() {
             }
         }
 
-        // --- 6. D3.JS OPEN-SOURCE FAMILY TREE ENGINE (100% FREE & PERMISSIVE) ---
+        // --- 6. D3.JS OPEN-SOURCE FAMILY TREE ENGINE ---
         let family = null;
         let d3ZoomBehavior = null;
         let d3SvgSelection = null;
@@ -1519,7 +1540,6 @@ function handleExitSession() {
                     }
                 }
             }
-            // Sort children chronologically by birthYear
             children.sort((a, b) => {
                 const yA = parseInt(a.birthYear, 10) || 9999;
                 const yB = parseInt(b.birthYear, 10) || 9999;
@@ -1548,7 +1568,6 @@ function handleExitSession() {
                 };
             }
 
-            // Identify clean lineage founders (nodes with no parents in dataset)
             const roots = [];
             const seen = new Set();
 
@@ -1557,7 +1576,6 @@ function handleExitSession() {
                 if (!hasParents) {
                     const sp = getSpouse(m, nodesById);
                     if (sp && ((sp.fid && nodesById[sp.fid]) || (sp.mid && nodesById[sp.mid]))) {
-                        // In-law spouse of a descendant; not a lineage root
                         return;
                     }
                     if (!seen.has(m.id)) {
@@ -1641,7 +1659,6 @@ function handleExitSession() {
             hierarchyForest.forEach(rootUnit => {
                 const rootHierarchy = d3.hierarchy(rootUnit, d => d.children);
 
-                // Compute width required by each subtree unit
                 function computeUnitWidth(node) {
                     const unitHasSpouse = !!node.data.spouse;
                     const thisUnitWidth = unitHasSpouse ? (CARD_W * 2 + SPOUSE_GAP) : CARD_W;
@@ -1660,7 +1677,6 @@ function handleExitSession() {
 
                 computeUnitWidth(rootHierarchy);
 
-                // Position nodes recursively in SVG coordinates
                 function assignPositions(node, leftBound, level) {
                     const y = startYOffset + level * (CARD_H + LEVEL_GAP);
                     const unitHasSpouse = !!node.data.spouse;
@@ -1682,7 +1698,7 @@ function handleExitSession() {
                 assignPositions(rootHierarchy, currentXOffset, 0);
                 currentXOffset += rootHierarchy._subtreeWidth + 100;
 
-                // Render Connectors (Orthogonal Pedigree Links)
+                // Render Connectors
                 rootHierarchy.descendants().forEach(node => {
                     if (node.children && node.children.length > 0) {
                         const unitHasSpouse = !!node.data.spouse;
@@ -1690,24 +1706,20 @@ function handleExitSession() {
                         const parentBottomY = node.y + CARD_H;
                         const midBusY = parentBottomY + LEVEL_GAP / 2;
 
-                        // Down from parent
                         g.append("path")
                             .attr("class", "tree-link")
                             .attr("d", `M ${parentCenterX} ${parentBottomY} L ${parentCenterX} ${midBusY}`);
 
-                        // Min and Max child X for horizontal bus bar
                         const firstChild = node.children[0];
                         const lastChild = node.children[node.children.length - 1];
 
                         const firstChildCenterX = firstChild.x + (firstChild.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
                         const lastChildCenterX = lastChild.x + (lastChild.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
 
-                        // Horizontal crossbar
                         g.append("path")
                             .attr("class", "tree-link")
                             .attr("d", `M ${firstChildCenterX} ${midBusY} L ${lastChildCenterX} ${midBusY}`);
 
-                        // Down to each child
                         node.children.forEach(child => {
                             const childCenterX = child.x + (child.data.spouse ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
                             const childTopY = child.y;
@@ -1724,7 +1736,6 @@ function handleExitSession() {
                     const p1 = unit.primary;
                     const p2 = unit.spouse;
 
-                    // Primary card
                     renderPersonCard(g, p1, node.x, node.y, CARD_W, CARD_H);
                     allRenderedPositions.set(p1.id, { x: node.x + CARD_W / 2, y: node.y + CARD_H / 2 });
 
@@ -1733,7 +1744,6 @@ function handleExitSession() {
                         renderPersonCard(g, p2, p2X, node.y, CARD_W, CARD_H);
                         allRenderedPositions.set(p2.id, { x: p2X + CARD_W / 2, y: node.y + CARD_H / 2 });
 
-                        // Marriage bridge between partners
                         const mLineStartX = node.x + CARD_W;
                         const mLineEndX = p2X;
                         const mLineY = node.y + CARD_H / 2;
@@ -1752,7 +1762,6 @@ function handleExitSession() {
                             .attr("fill", "#ec4899");
                     }
 
-                    // Branch collapse badge button
                     if (unit.childrenCount > 0) {
                         const unitCenterX = node.x + (p2 ? (CARD_W * 2 + SPOUSE_GAP) / 2 : CARD_W / 2);
                         const badgeY = node.y + CARD_H + 8;
@@ -1784,7 +1793,6 @@ function handleExitSession() {
                 });
             });
 
-            // Single Person Card Renderer Helper
             function renderPersonCard(containerGroup, person, x, y, w, h) {
                 const cardG = containerGroup.append("g")
                     .attr("class", "person-card")
@@ -1795,14 +1803,11 @@ function handleExitSession() {
                         }
                     });
 
-                // Background Rect
-                const cardBg = cardG.append("rect")
+                cardG.append("rect")
                     .attr("class", `card-bg ${person.gender || "male"} ${person.isDeceased ? "deceased" : ""}`)
                     .attr("width", w)
                     .attr("height", h);
 
-                // Avatar / Photo
-                const avatarGroup = cardG.append("g").attr("transform", "translate(8, 12)");
                 const clipId = `avatar-clip-${person.id}-${Math.floor(Math.random() * 10000)}`;
 
                 cardG.append("clipPath")
@@ -1846,8 +1851,6 @@ function handleExitSession() {
                     .attr("class", "avatar-circle")
                     .attr("fill", "none");
 
-                // Text Lines
-                // 1. Name
                 const textStartX = 54;
                 const displayName = person.name || "Unknown";
                 cardG.append("text")
@@ -1856,7 +1859,6 @@ function handleExitSession() {
                     .attr("y", 22)
                     .text(displayName.length > 13 ? displayName.slice(0, 12) + "…" : displayName);
 
-                // 2. Dates
                 let dates = "";
                 if (person.isDeceased) {
                     if (person.birthYear && person.deathYear) {
@@ -1876,7 +1878,6 @@ function handleExitSession() {
                     .attr("y", 38)
                     .text(dates || (person.gender === "female" ? "Daughter / Wife" : "Son / Husband"));
 
-                // 3. Location / Marker
                 const extra = person.place || person.notes || "";
                 if (extra) {
                     cardG.append("text")
@@ -1887,7 +1888,6 @@ function handleExitSession() {
                         .text(extra.length > 13 ? extra.slice(0, 12) + "…" : extra);
                 }
 
-                // Quick Add Relative Button (+ icon on hover/card)
                 if (canEdit()) {
                     const addBtnG = cardG.append("g")
                         .attr("transform", `translate(${w - 20}, 4)`)
@@ -1914,7 +1914,6 @@ function handleExitSession() {
                 }
             }
 
-            // Expose uniform family controller API
             family = {
                 fit: function() {
                     if (!d3GroupSelection || !d3SvgSelection || !d3ZoomBehavior) return;
@@ -1950,7 +1949,6 @@ function handleExitSession() {
                 }
             };
 
-            // Initial auto-fit
             setTimeout(() => {
                 if (family) family.fit();
             }, 100);
@@ -1980,7 +1978,6 @@ function handleExitSession() {
         }
 
         // --- 8. AUTHENTICATION & ADMIN CONTROLS ---
-                // --- IN-APP ADMIN APPROVAL PORTAL ---
         function checkAdminPendingBadge() {
             if (!isAdmin) return;
             const btn = document.getElementById("adminPendingBtn");
@@ -2085,7 +2082,6 @@ function handleExitSession() {
                 document.getElementById("passcodeModal").style.display = "none";
                 showToast("Admin Mode Activated");
 
-                // Isolate Super Admin workspace: detach previously viewed family tree
                 if (treeUnsubscribe) {
                     treeUnsubscribe();
                     treeUnsubscribe = null;
@@ -2119,30 +2115,29 @@ function handleExitSession() {
         }
 
         function performAuth() {
-    				const email = document.getElementById("authEmail").value.trim();
-    				const password = document.getElementById("authPassword").value.trim();
-    				const errDiv = document.getElementById("authError");
+            const email = document.getElementById("authEmail").value.trim();
+            const password = document.getElementById("authPassword").value.trim();
+            const errDiv = document.getElementById("authError");
 
-    				if (!email || !password) {
-        				errDiv.innerText = "Please provide both email and password.";
-        				errDiv.style.display = "block";
-        				return;
-    					}
+            if (!email || !password) {
+                errDiv.innerText = "Please provide both email and password.";
+                errDiv.style.display = "block";
+                return;
+            }
 
-    				auth.signInWithEmailAndPassword(email, password)
-        				.then(() => {
-            				closeAuthModal();
-            				document.getElementById("passcodeModal").style.display = "none";
-            				if (window.location.hash === "#admin") {
-                			history.replaceState(null, null, ' ');
-            				}
-        				})
-        			.catch(err => {
-            			errDiv.innerText = err.message;
-            			errDiv.style.display = "block";
-        				});
-}
-
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    closeAuthModal();
+                    document.getElementById("passcodeModal").style.display = "none";
+                    if (window.location.hash === "#admin") {
+                        history.replaceState(null, null, ' ');
+                    }
+                })
+                .catch(err => {
+                    errDiv.innerText = err.message;
+                    errDiv.style.display = "block";
+                });
+        }
 
         function renderAdminDashboard() {
             const container = document.getElementById("tree");
@@ -2164,19 +2159,6 @@ function handleExitSession() {
                     </div>
                 </div>
             `;
-        }
-
-        function signOutAdmin() {
-            auth.signOut().then(() => {
-                isAdmin = false;
-                TENANT_ID = "";
-                familyData = [];
-                localStorage.removeItem("thodar_active_tree");
-                document.getElementById("treeTitleHeader").innerText = "Thodar Family Tree";
-                updateControlBar();
-                openUnlockDialog();
-                showToast("Returned to Viewer Mode");
-            });
         }
 
         // --- 9. IMAGE COMPRESSION & FIREBASE STORAGE UPLOAD ---
@@ -2316,30 +2298,6 @@ function handleExitSession() {
         }
 
         // --- 11. REAL-TIME CLOUD LISTENER ---
-        function showPendingScreen(treeName) {
-            const overlay = document.getElementById("gatekeeperOverlay");
-            if (!overlay) return;
-            overlay.style.display = "flex";
-            document.getElementById("gatekeeperIcon").innerText = "⏳";
-            document.getElementById("gatekeeperTitle").innerText = "Tree Awaiting Approval";
-            document.getElementById("gatekeeperMessage").innerHTML = 
-                `<strong>${treeName}</strong> is currently pending administrator activation. Access will unlock once approved.`;
-        }
-
-        function showErrorScreen(title, message) {
-            const overlay = document.getElementById("gatekeeperOverlay");
-            if (!overlay) return;
-            overlay.style.display = "flex";
-            document.getElementById("gatekeeperIcon").innerText = "⚠️";
-            document.getElementById("gatekeeperTitle").innerText = title;
-            document.getElementById("gatekeeperMessage").innerText = message;
-        }
-
-        function hideOverlayScreen() {
-            const overlay = document.getElementById("gatekeeperOverlay");
-            if (overlay) overlay.style.display = "none";
-        }
-
         function setupRealtimeListener() {
             if (treeUnsubscribe) treeUnsubscribe();
             if (!TENANT_ID || !treeDocRef) {
@@ -2361,7 +2319,6 @@ function handleExitSession() {
                     if (data.treeName) {
                         document.getElementById("treeTitleHeader").innerText = data.treeName;
                     }
-
 
                     const cloudMembers = Array.isArray(data.members) ? data.members : [];
                     if (JSON.stringify(cloudMembers) !== JSON.stringify(familyData)) {
@@ -2427,10 +2384,7 @@ function handleExitSession() {
                 updateDockButtonState();
 
                 setTimeout(() => {
-                    family.center(nodeId, {
-                        valign: FamilyTree.valign.center,
-                        halign: FamilyTree.halign.center
-                    });
+                    family.center(nodeId);
                 }, 150);
             }
         }
